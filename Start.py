@@ -1,8 +1,10 @@
 from Manage.Mail import SendMail
+from ui.ui import *
 
-class Start():
+class Main():
     def __init__(self):
         print("Start Class init")
+        UI_class()
         
     
     def sendMail(self):
@@ -16,6 +18,5 @@ class Start():
 
 
 if __name__ == '__main__':
-    start = Start()
-
-    start.sendMail()
+    start = Main()
+    #start.sendMail()

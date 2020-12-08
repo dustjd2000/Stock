@@ -9,12 +9,19 @@ class Kiwoom(QAxWidget):
 
         ###########변수모음
         self.account_num = None
+
+        self.accout_stock_dict = {}
         ###################
+
+        ##########계좌 관련변수
+        self.use_money = 0
+        self.use_money_percent = 0.5
+        ####################
 
         ###이벤트 루프 모음
         self.login_event_loop = None
         self.detail_account_info_event_loop = None
-        self.detail_account_info_event_loop_2 = None
+        self.detail_account_info_event_loop_2 = QEventLoop()
         ###################
 
         self.get_ocx_instance()
@@ -69,7 +76,7 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "조회구분", "2")
         self.dynamicCall("CommRqData(String, String, int, String)","계좌평가잔고내역","opw00018", sPrevNext, "2000")
 
-        self.detail_account_info_event_loop_2 = QEventLoop()
+        
         self.detail_account_info_event_loop_2.exec_()
 
     def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
@@ -77,6 +84,9 @@ class Kiwoom(QAxWidget):
         if sRQName == "예수금상세현황요청":
             deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "예수금")
             print("예수금: {}".format(int(deposit)))
+
+            self.use_money = int(deposit) * self.use_money_percent
+            self.use_money = int(self.use_money / 4)
 
             ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
             print("출금가능금액: {}".format(int(ok_deposit)))
@@ -94,4 +104,47 @@ class Kiwoom(QAxWidget):
 
             print("총수익률(%): {}".format(total_profit_loss_rate_result))
 
-            self.detail_account_info_event_loop_2.exit()
+            rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
+            cnt = 0
+
+            for i in range(rows):
+                code = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목번호")
+                code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목명")
+                stock_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "보유수량")
+                buy_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "매입가")
+                learn_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "수익률(%)")
+                current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "현재가")
+                total_chegual_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "매입금액")
+                possible_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "매매가능수량")
+
+                if code in self.accout_stock_dict:
+                    pass
+                else:
+                    self.accout_stock_dict.update({code:{}})
+
+                code = code.strip()[1:]
+                code_nm = code_nm.strip()
+                stock_quantity = int(stock_quantity.strip())
+                buy_price = int(buy_price.strip())
+                learn_rate = float(learn_rate.strip())
+                current_price = int(current_price.strip())
+                total_chegual_price = int(total_chegual_price.strip())
+                possible_quantity = int(possible_quantity.strip())
+
+                self.accout_stock_dict[code].update({"종목명": code_nm})
+                self.accout_stock_dict[code].update({"보유수량": stock_quantity})
+                self.accout_stock_dict[code].update({"매입가": buy_price})
+                self.accout_stock_dict[code].update({"수익률(%)": learn_rate})
+                self.accout_stock_dict[code].update({"현재가": current_price})
+                self.accout_stock_dict[code].update({"매입금액": total_chegual_price})
+                self.accout_stock_dict[code].update({"매매가능수량": possible_quantity})
+
+                cnt += 1
+
+            print("계좌에 가지고 있는 종목: {}".format(cnt))
+            print("보유계좌 정보: {}".format(self.accout_stock_dict))
+
+            if sPrevNext == "2":
+                self.detail_account_mystock(sPrevNext="2")
+            else:
+                self.detail_account_info_event_loop_2.exit()

@@ -12,11 +12,14 @@ class Kiwoom(QAxWidget):
 
         self.accout_stock_dict = {}
         self.not_account_stock_dict = {}
+
+        self.will_account_stock_code = {}
         ###################
 
         ##########계좌 관련변수
         self.use_money = 0
         self.use_money_percent = 0.5
+        self.use_up_down_rate_percent = 7
         ####################
 
         ###이벤트 루프 모음
@@ -36,6 +39,9 @@ class Kiwoom(QAxWidget):
         self.detail_account_info() #예수금 정보 가져오기
         self.detail_account_mystock()   #계좌평가 잔고 내역
         self.not_concluded_account() #미체결정보 확인
+        self.new_high_stock() #신고가 조회
+
+
 
 
     def get_ocx_instance(self):
@@ -89,6 +95,14 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "체결구분", "1")
         self.dynamicCall("SetInputValue(String, String)", "매매구분", "0")
         self.dynamicCall("CommRqData(String, String, int, String)","실시간미체결요청","opt10075", sPrevNext, self.screen_my_info)
+
+        self.detail_account_info_event_loop.exec_()
+    
+    def new_high_stock(self, sPrevNext="0"):
+        print("신고가정보 조회")
+        self.dynamicCall("SetInputValue(String, String)", "시장구분", "000")
+        self.dynamicCall("SetInputValue(String, String)", "신고저구분", "1")
+        self.dynamicCall("CommRqData(String, String, int, String)","신고가요청","OPT10016", sPrevNext, self.screen_my_info)
 
         self.detail_account_info_event_loop.exec_()
 
@@ -205,5 +219,38 @@ class Kiwoom(QAxWidget):
                 cnt += 1
 
             print("미체결종목count: {}".format(cnt))       
+            
+            self.detail_account_info_event_loop.exit()
+        
+        elif sRQName == "신고가요청":
+            rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
+            cnt = 0
+            for i in range(rows):
+                code = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목코드")
+                code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목명")
+                current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "현재가")
+                up_down_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "등락률")
+                trade_count = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "거래량")
+
+                code = code.strip()
+                code_nm = code_nm.strip()
+                current_price = int(current_price.strip())
+                up_down_rate = up_down_rate.strip()
+                trade_count = trade_count.strip()
+
+                if '+' in up_down_rate:     #등락률 +
+                    up_down_rate_temp = int(float(up_down_rate[1:]))
+                    
+                    if up_down_rate_temp == self.use_up_down_rate_percent or up_down_rate_temp == self.use_up_down_rate_percent +1 or up_down_rate_temp == self.use_up_down_rate_percent +2:
+                        self.will_account_stock_code.update({"종목코드": code})
+                        self.will_account_stock_code.update({"종목명": code_nm})
+                        self.will_account_stock_code.update({"현재가": current_price})
+                        self.will_account_stock_code.update({"등락률": up_down_rate})
+                        self.will_account_stock_code.update({"거래량": trade_count})
+
+                        print("신고가 종목: {}".format(self.will_account_stock_code))
+                        cnt += 1
+
+            print("신고가count: {}".format(cnt))       
             
             self.detail_account_info_event_loop.exit()

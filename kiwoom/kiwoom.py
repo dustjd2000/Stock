@@ -14,12 +14,15 @@ class Kiwoom(QAxWidget):
         self.not_account_stock_dict = {}
 
         self.will_account_stock_code = {}
+        self.sell_account_stock_dict = {}
         ###################
 
         ##########계좌 관련변수
-        self.use_money = 0
-        self.use_money_percent = 0.5
-        self.use_up_down_rate_percent = 7
+        self.use_money = 0  # 보유 예수금
+        self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
+        self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
+        self.use_send_order_rate = 3 # 매도 주문 조건 등락율 %
+        self.use_buy_price_rate = 0.3 # 매수 주문 현재가 + 비율
         ####################
 
         ###이벤트 루프 모음
@@ -40,6 +43,9 @@ class Kiwoom(QAxWidget):
         self.detail_account_mystock()   #계좌평가 잔고 내역
         self.not_concluded_account() #미체결정보 확인
         self.new_high_stock() #신고가 조회
+        self.Send_Buy_Order() # 매수 주문
+        self.Send_Sell_Order() # 매도 주문
+
 
 
 
@@ -105,6 +111,45 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("CommRqData(String, String, int, String)","신고가요청","OPT10016", sPrevNext, self.screen_my_info)
 
         self.detail_account_info_event_loop.exec_()
+    
+    def Send_Buy_Order(self):
+        print("매수 주문 시작")
+
+        result = self.use_money / self.will_account_stock_code["현재가"]
+        quantity = int(result)
+
+        buy_price = self.will_account_stock_code["현재가"] + int(self.will_account_stock_code["현재가"] * self.use_buy_price_rate)
+
+        order_succest = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                            ["신규매수", self.screen_my_info, self.account_num, 1, self.will_account_stock_code["종목코드"], quantity, self.will_account_stock_code["현재가"],buy_price, ""]
+                            )
+        
+        if order_succest == 0:
+            print("매수주문 성공")
+        else :
+            print("매수주문 실패")
+        
+        print("종목명: {}".format(self.will_account_stock_code["종목명"]))
+        print("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
+        print("현재가: {}".format(self.will_account_stock_code["현재가"]))
+        print("buy_price: {}".format(buy_price))
+        print("매수개수: {}".format(quantity))
+    
+    def Send_Sell_Order(self):
+        print("매도 주문 시작")
+
+        # 계좌평가 잔고내역 조회
+        # 등락율 비교
+        # 매도
+    
+    def up_down_rate_stock(self, now_price, buy_price):
+        meme_rate = ((now_price - buy_price)/buy_price) * 100
+
+        if meme_rate > self.use_send_order_rate or meme_rate < self.use_send_order_rate * -1 :
+            return True
+        else :
+            return False
+
 
     def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
         
@@ -113,7 +158,7 @@ class Kiwoom(QAxWidget):
             print("예수금: {}".format(int(deposit)))
 
             self.use_money = int(deposit) * self.use_money_percent
-            self.use_money = int(self.use_money / 4)
+            #self.use_money = int(self.use_money / 4)
 
             ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
             print("출금가능금액: {}".format(int(ok_deposit)))

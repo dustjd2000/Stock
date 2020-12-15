@@ -56,7 +56,7 @@ class Kiwoom(QAxWidget):
         self.new_high_stock() #신고가 조회
         self.Send_Buy_Order() # 매수 주문
         #self.Send_Sell_Order() # 매도 주문
-        """
+        
         while True:
             now = time.localtime()
             hour = int(now.tm_hour)
@@ -64,7 +64,7 @@ class Kiwoom(QAxWidget):
 
             if hour == 9 and min == 40:
                 break
-        """
+        
         self.Send_Sell_Sucess_Mail()
 
 

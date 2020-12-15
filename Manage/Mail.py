@@ -27,7 +27,7 @@ s.sendmail(strFrom, strTo, msgRoot.as_string())
 s.quit()
 """
 
-class SendMail():
+class SendMail(object):
     def __init__(self):
         self.loginMail = 'dustjd2000@gmail.com'
         self.loginPass = '#qhwhehrh3031'

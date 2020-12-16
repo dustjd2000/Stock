@@ -69,3 +69,8 @@ class SendMail(object):
         s.quit()
 
         print("Send Mail() Success!")
+    
+    def SendMailMsgSet(self, subject, msg):
+        self.setSubject(subject)
+        self.setMsg(msg)
+        self.sendMail()

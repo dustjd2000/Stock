@@ -4,13 +4,18 @@ from config.errorCode import *
 from config.kiwoomType import *
 from Manage.Mail import SendMail
 import time
+from logManage.logManager import LogManager
 
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
         print("Kiwoom init()")
 
+        self.log = LogManager()
+
         self.realtype = RealType()
+
+        self.objMail = SendMail()
 
         ###########변수모음
         self.account_num = None
@@ -42,20 +47,28 @@ class Kiwoom(QAxWidget):
         self.screen_start_stop_real = "1000"
         ########################
 
-        self.get_ocx_instance()
-        self.event_slot()
+        try:
+            self.get_ocx_instance()
+            self.event_slot()
 
-        # 실시간 
-        self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
+            self.signal_login_commConnect()
+            self.get_account_info()
+            self.detail_account_info() #예수금 정보 가져오기
+            self.detail_account_mystock()   #계좌평가 잔고 내역
+            self.not_concluded_account() #미체결정보 확인
+            self.new_high_stock() #신고가 조회
+            self.Send_Buy_Order() # 매수 주문
 
-        self.signal_login_commConnect()
-        self.get_account_info()
-        self.detail_account_info() #예수금 정보 가져오기
-        self.detail_account_mystock()   #계좌평가 잔고 내역
-        self.not_concluded_account() #미체결정보 확인
-        self.new_high_stock() #신고가 조회
-        self.Send_Buy_Order() # 매수 주문
-        #self.Send_Sell_Order() # 매도 주문
+            # 실시간 
+            self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
+            #self.Send_Sell_Order() # 매도 주문
+        except Exception as ex:
+            subject = "kiwoom 자동주식 매매 실패"
+            msg = ex
+
+            self.log.logPrint("kiwoom 자동주식 매매 실패 cause: {}".format(ex))
+            self.objMail.SendMailMsgSet(subject, msg)
+
         
         while True:
             now = time.localtime()
@@ -63,6 +76,7 @@ class Kiwoom(QAxWidget):
             min = int(now.tm_min)
 
             if hour == 9 and min == 40:
+                self.log.logPrint("{}시{}분 주식매매 종료".format(str(hour), str(min)))
                 break
         
         self.Send_Sell_Sucess_Mail()
@@ -94,7 +108,8 @@ class Kiwoom(QAxWidget):
         
         self.account_num = account_list.split(';')[0]
 
-        print("나의 보유계좌번호: {}".format(self.account_num))
+        msg = "나의 보유계좌번호: " + self.account_num
+        self.log.logPrint(msg)
 
     def detail_account_info(self):
         print("예수금 가져오기")
@@ -134,7 +149,7 @@ class Kiwoom(QAxWidget):
         self.detail_account_info_event_loop.exec_()
     
     def Send_Buy_Order(self):
-        print("매수 주문 시작")
+        self.log.logPrint("매수 주문 시작")
 
         result = self.use_money / self.will_account_stock_code["현재가"]
         quantity = int(result)
@@ -146,19 +161,19 @@ class Kiwoom(QAxWidget):
                             )
         
         if order_success == 0:
-            print("매수주문 성공")
+            self.log.logPrint("매수주문 성공")
         else :
-            print("매수주문 실패")
+            self.log.logPrint("매수주문 실패")
         
-        print("종목명: {}".format(self.will_account_stock_code["종목명"]))
-        print("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
-        print("현재가: {}".format(self.will_account_stock_code["현재가"]))
-        print("buy_price: {}".format(buy_price))
-        print("매수개수: {}".format(quantity))
-        print("매수 주문 종료")
+        self.log.logPrint("종목명: {}".format(self.will_account_stock_code["종목명"]))
+        self.log.logPrint("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
+        self.log.logPrint("현재가: {}".format(self.will_account_stock_code["현재가"]))
+        self.log.logPrint("buy_price: {}".format(buy_price))
+        self.log.logPrint("매수개수: {}".format(quantity))
+        self.log.logPrint("매수 주문 종료")
     
     def Send_Sell_Order(self):
-        print("매도 주문 시작")
+        self.log.logPrint("매도 주문 시작")
 
         # 계좌평가 잔고내역 조회
         self.accout_stock_dict = {}  # 계좌평가 잔고내역 종목정보 초기화
@@ -175,17 +190,17 @@ class Kiwoom(QAxWidget):
                                 )
             
             if order_success == 0:
-                print("매도주문 성공")
+                self.log.logPrint("매도주문 성공")
             else :
-                print("매도주문 실패")
+                self.log.logPrint("매도주문 실패")
             
-            print("*********************************************")
-            print("종목명: {}".format(self.accout_stock_dict[key]["종목명"]))
-            print("종목코드: {}".format(self.accout_stock_dict[key]["종목코드"]))
-            print("현재가: {}".format(self.accout_stock_dict[key]["현재가"]))
-            print("sell_price: {}".format(sell_price))
-            print("매도개수: {}".format(quantity))
-        print("매도 주문 끝")
+            self.log.logPrint("*********************************************")
+            self.log.logPrint("종목명: {}".format(self.accout_stock_dict[key]["종목명"]))
+            self.log.logPrint("종목코드: {}".format(self.accout_stock_dict[key]["종목코드"]))
+            self.log.logPrint("현재가: {}".format(self.accout_stock_dict[key]["현재가"]))
+            self.log.logPrint("sell_price: {}".format(sell_price))
+            self.log.logPrint("매도개수: {}".format(quantity))
+        self.log.logPrint("매도 주문 끝")
     
     def Get_Real_MyAccount(self):
         self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["계좌번호"], "1")
@@ -195,8 +210,9 @@ class Kiwoom(QAxWidget):
     def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
         
         if sRQName == "예수금상세현황요청":
+            self.log.logPrint("예수금상세현황요청")
             deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "예수금")
-            print("예수금: {}".format(int(deposit)))
+            self.log.logPrint("예수금: {}".format(int(deposit)))
 
             self.use_money_origin = int(deposit)
 
@@ -204,20 +220,21 @@ class Kiwoom(QAxWidget):
             #self.use_money = int(self.use_money / 4)
 
             ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
-            print("출금가능금액: {}".format(int(ok_deposit)))
+            self.log.logPrint("출금가능금액: {}".format(int(ok_deposit)))
 
             self.detail_account_info_event_loop.exit()
         
         elif sRQName == "계좌평가잔고내역":
+            self.log.logPrint("계좌평가잔고내역")
             total_buy_money = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총매입금액")
             total_buy_money = int(total_buy_money)
 
-            print("총매입금액: {}".format(total_buy_money))
+            self.log.logPrint("총매입금액: {}".format(total_buy_money))
             
             total_profit_loss_rate = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총수익률(%)")
             total_profit_loss_rate_result = float(total_profit_loss_rate)
 
-            print("총수익률(%): {}".format(total_profit_loss_rate_result))
+            self.log.logPrint("총수익률(%): {}".format(total_profit_loss_rate_result))
 
             rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
             cnt = 0
@@ -256,8 +273,8 @@ class Kiwoom(QAxWidget):
 
                 cnt += 1
 
-            print("계좌에 가지고 있는 종목: {}".format(cnt))
-            print("보유계좌 정보: {}".format(self.accout_stock_dict))
+            self.log.logPrint("계좌에 가지고 있는 종목: {}".format(cnt))
+            self.log.logPrint("보유계좌 정보: {}".format(self.accout_stock_dict))
 
             if sPrevNext == "2":
                 self.detail_account_mystock(sPrevNext="2")
@@ -265,6 +282,7 @@ class Kiwoom(QAxWidget):
                 self.detail_account_info_event_loop.exit()
         
         elif sRQName == "실시간미체결요청":
+            self.log.logPrint("실시간미체결요청")
             rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
             cnt = 0
             for i in range(rows):
@@ -303,14 +321,15 @@ class Kiwoom(QAxWidget):
                 self.not_account_stock_dict[order_no].update({"미체결수량": not_quantity})
                 self.not_account_stock_dict[order_no].update({"체결량": ok_quantity})
                 
-                print("미체결 종목: {}".format(self.not_account_stock_dict[order_no]))
+                self.log.logPrint("미체결 종목: {}".format(self.not_account_stock_dict[order_no]))
                 cnt += 1
 
-            print("미체결종목count: {}".format(cnt))       
+            self.log.logPrint("미체결종목count: {}".format(cnt))       
             
             self.detail_account_info_event_loop.exit()
         
         elif sRQName == "신고가요청":
+            self.log.logPrint("신고가요청")
             rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
             cnt = 0
             for i in range(rows):
@@ -336,10 +355,10 @@ class Kiwoom(QAxWidget):
                         self.will_account_stock_code.update({"등락률": up_down_rate})
                         self.will_account_stock_code.update({"거래량": trade_count})
 
-                        print("신고가 종목: {}".format(self.will_account_stock_code))
+                        self.log.logPrint("신고가 종목: {}".format(self.will_account_stock_code))
                         cnt += 1
 
-            print("신고가count: {}".format(cnt))       
+            self.log.logPrint("신고가count: {}".format(cnt))  
             
             self.detail_account_info_event_loop.exit()
     
@@ -348,6 +367,7 @@ class Kiwoom(QAxWidget):
        #실시간 데이터 조회
 
         if sRealType == "주문체결":
+           self.log.logPrint("실시간 주문체결")
            code = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목코드"])
            code_nm = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목명"])
            order_state = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["주문상태"])
@@ -362,9 +382,11 @@ class Kiwoom(QAxWidget):
 
            if order_gubun == "매수" and order_state == "체결" : # 매수 체결 성공
                # 매도 시도
+               self.log.logPrint("실시간 매수 체결 성공, 매도 시도")
                self.Send_Sell_Order()
            elif order_gubun == "매도" and order_state == "체결" :   # 매도 체결 성공
                 # 매도 정보 저장
+                self.log.logPrint("실시간 매도 체결 성공, 매도정보 저장")
                 if code in self.sell_success_stock_dict:
                     pass
                 else:
@@ -379,10 +401,6 @@ class Kiwoom(QAxWidget):
 
         self.detail_account_info() #예수금 정보 가져오기
 
-        objMail = SendMail()
-
-        objMail.setSubject("Kiwoom 자동주식매매 Sell_Success")
-
         total_money = "예수금: {}".format(self.use_money_origin) + "\n\n"
         
         msg = "내역 : \n"
@@ -395,6 +413,10 @@ class Kiwoom(QAxWidget):
             msg += "매도수구분: {}".format(self.sell_success_stock_dict[key]["매도수구분"]) + "\n"
             msg += "**********************************" + "\n" 
 
-        objMail.setMsg(total_money + msg)
+        subject = "Kiwoom 자동주식매매 Sell_Success"
+        sendmsg = total_money + msg
 
-        objMail.sendMail()
+        self.log.logPrint("Send_Sell_Success_Mail()")
+        self.log.logPrint(sendmsg)
+
+        self.objMail.SendMailMsgSet(subject, sendmsg)

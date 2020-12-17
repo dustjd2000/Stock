@@ -101,9 +101,8 @@ class Kiwoom(QAxWidget):
     def login_slot(self, errCode):
         if 0 == int(str(errCode)):
             self.log.logPrint("로그인 정상접속")
-            self.log.logPrint(str(errors(errCode)[1:]))
         else:
-            self.log.logPrint(str(errors(errCode)[1:]))
+            self.log.logPrint("로그인 실패: {}".format(str(errors(errCode)[1:])) )
             self.objMail.SendMailMsgSet("kiwoom 자동 주식매매 로그인 접속 실패", "원인: {}".format(str(errors(errCode)[1:])))
         
         self.login_event_loop.exit()

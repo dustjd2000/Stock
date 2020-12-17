@@ -34,7 +34,7 @@ class Kiwoom(QAxWidget):
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
         self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
         self.use_sell_order_rate = 0.04 # 매도 주문 조건 등락율 *100 %
-        self.use_buy_price_rate = 0.3 # 매수 주문 현재가 + 비율
+        self.use_buy_price_rate = 0.01 # 매수 주문 현재가 * 비율
         ####################
 
         ###이벤트 루프 모음
@@ -353,14 +353,15 @@ class Kiwoom(QAxWidget):
                     up_down_rate_temp = int(float(up_down_rate[1:]))
                     
                     if up_down_rate_temp == self.use_up_down_rate_percent or up_down_rate_temp == self.use_up_down_rate_percent +1 or up_down_rate_temp == self.use_up_down_rate_percent +2:
-                        self.will_account_stock_code.update({"종목코드": code})
-                        self.will_account_stock_code.update({"종목명": code_nm})
-                        self.will_account_stock_code.update({"현재가": current_price})
-                        self.will_account_stock_code.update({"등락률": up_down_rate})
-                        self.will_account_stock_code.update({"거래량": trade_count})
+                        if self.use_money > current_price:
+                            self.will_account_stock_code.update({"종목코드": code})
+                            self.will_account_stock_code.update({"종목명": code_nm})
+                            self.will_account_stock_code.update({"현재가": current_price})
+                            self.will_account_stock_code.update({"등락률": up_down_rate})
+                            self.will_account_stock_code.update({"거래량": trade_count})
 
-                        self.log.logPrint("신고가 종목: {}".format(self.will_account_stock_code))
-                        cnt += 1
+                            self.log.logPrint("신고가 종목: {}".format(self.will_account_stock_code))
+                            cnt += 1
 
             self.log.logPrint("신고가count: {}".format(cnt))  
             

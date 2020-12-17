@@ -34,7 +34,8 @@ class Kiwoom(QAxWidget):
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
         self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
         self.use_sell_order_rate = 0.04 # 매도 주문 조건 등락율 *100 %
-        self.use_buy_price_rate = 0.01 # 매수 주문 현재가 * 비율
+        self.use_buy_price_rate = 3 # 매수 주문 현재가 대상 호가 *
+        
         ####################
 
         ###이벤트 루프 모음
@@ -158,7 +159,9 @@ class Kiwoom(QAxWidget):
         result = self.use_money / self.will_account_stock_code["현재가"]
         quantity = int(result)
 
-        buy_price = self.will_account_stock_code["현재가"] + int(self.will_account_stock_code["현재가"] * self.use_buy_price_rate)
+        hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
+
+        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
 
         order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                             ["신규매수", self.screen_my_info, self.account_num, 1, self.will_account_stock_code["종목코드"], quantity, self.will_account_stock_code["현재가"],buy_price, ""]
@@ -185,7 +188,15 @@ class Kiwoom(QAxWidget):
 
         for key, value in self.accout_stock_dict:
             # 등락율 매도가격
-            sell_price = self.accout_stock_dict[key]["매입가"] + int(self.accout_stock_dict[key]["매입가"] * self.use_sell_order_rate)
+
+            hoga = self.hogaUnitCalc(int(self.accout_stock_dict[key]["매입가"]))
+
+            hope_price = self.accout_stock_dict[key]["매입가"] + int(self.accout_stock_dict[key]["매입가"] * self.use_sell_order_rate)
+
+            buyhoga_count = ( (hope_price - int(self.accout_stock_dict[key]["매입가"])) / hoga )
+
+            sell_price = int(self.accout_stock_dict[key]["매입가"]) + (buyhoga_count * hoga)
+
             quantity = self.accout_stock_dict[key]["보유수량"]
 
             # 매도
@@ -353,7 +364,7 @@ class Kiwoom(QAxWidget):
                     up_down_rate_temp = int(float(up_down_rate[1:]))
                     
                     if up_down_rate_temp == self.use_up_down_rate_percent or up_down_rate_temp == self.use_up_down_rate_percent +1 or up_down_rate_temp == self.use_up_down_rate_percent +2:
-                        if self.use_money > current_price:
+                        if self.use_money > current_price and current_price < 100000:
                             self.will_account_stock_code.update({"종목코드": code})
                             self.will_account_stock_code.update({"종목명": code_nm})
                             self.will_account_stock_code.update({"현재가": current_price})
@@ -425,3 +436,19 @@ class Kiwoom(QAxWidget):
         self.log.logPrint(sendmsg)
 
         self.objMail.SendMailMsgSet(subject, sendmsg)
+    
+    def hogaUnitCalc(self, price):
+        hogaUnit = 1
+
+        if price < 1000:
+            hogaUnit = 1
+        elif price < 5000:
+            hogaUnit = 5
+        elif price < 10000:
+            hogaUnit = 10
+        elif price < 50000:
+            hogaUnit = 50
+        elif price < 100000:
+            hogaUnit = 100
+        
+        return hogaUnit

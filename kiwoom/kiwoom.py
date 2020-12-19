@@ -51,26 +51,27 @@ class Kiwoom(QAxWidget):
         try:
             self.get_ocx_instance()
             self.event_slot()
+            #self.real_event_slot()
 
-            self.signal_login_commConnect()
-            self.get_account_info()
-            self.detail_account_info() #예수금 정보 가져오기
-            self.detail_account_mystock()   #계좌평가 잔고 내역
-            self.not_concluded_account() #미체결정보 확인
-            self.new_high_stock() #신고가 조회
-            self.Send_Buy_Order() # 매수 주문
+            #self.signal_login_commConnect()
+            #self.get_account_info()
+            #self.detail_account_info() #예수금 정보 가져오기
+            #self.detail_account_mystock()   #계좌평가 잔고 내역
+            #self.not_concluded_account() #미체결정보 확인
+            #self.new_high_stock() #신고가 조회
+            #self.Send_Buy_Order() # 매수 주문
 
-            # 실시간 
-            self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
+            # 특정 종목 실시간 
+            #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
             #self.Send_Sell_Order() # 매도 주문
         except Exception as ex:
             subject = "kiwoom 자동주식 매매 실패"
-            msg = ex
+            msg = str(ex)
 
-            self.log.logPrint("kiwoom 자동주식 매매 실패 cause: {}".format(ex))
+            self.log.logPrint("kiwoom 자동주식 매매 실패 cause: {}".format(msg))
             self.objMail.SendMailMsgSet(subject, msg)
 
-        
+        """
         while True:
             now = time.localtime()
             hour = int(now.tm_hour)
@@ -79,8 +80,10 @@ class Kiwoom(QAxWidget):
             if hour == 9 and min == 40:
                 self.log.logPrint("{}시{}분 주식매매 종료".format(str(hour), str(min)))
                 break
-        
-        self.Send_Sell_Sucess_Mail()
+        """
+        #self.Send_Sell_Sucess_Mail()
+
+        #exit()
 
 
 
@@ -92,7 +95,8 @@ class Kiwoom(QAxWidget):
         self.OnReceiveTrData.connect(self.trdata_slot)
     
     def real_event_slot(self):
-        self.OnReceiveRealData.connect(self.realdata_slot)
+        #self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
+        self.OnReceiveChejanData(self.chejan_slot)
     
     def signal_login_commConnect(self):
         self.dynamicCall("CommConnect()")
@@ -154,7 +158,7 @@ class Kiwoom(QAxWidget):
         self.detail_account_info_event_loop.exec_()
     
     def Send_Buy_Order(self):
-        self.log.logPrint("매수 주문 시작")
+        self.log.logPrint("##########신규 매수 주문 시작###########")
 
         result = self.use_money / self.will_account_stock_code["현재가"]
         quantity = int(result)
@@ -164,23 +168,23 @@ class Kiwoom(QAxWidget):
         buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
 
         order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                            ["신규매수", self.screen_my_info, self.account_num, 1, self.will_account_stock_code["종목코드"], quantity, self.will_account_stock_code["현재가"],buy_price, ""]
+                            "신규매수", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매수"], self.will_account_stock_code["종목코드"], quantity, buy_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""
                             )
         
         if order_success == 0:
-            self.log.logPrint("매수주문 성공")
+            self.log.logPrint("신규매수 주문 완료")
         else :
-            self.log.logPrint("매수주문 실패")
+            self.log.logPrint("신규매수 주문 실패")
         
         self.log.logPrint("종목명: {}".format(self.will_account_stock_code["종목명"]))
         self.log.logPrint("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
         self.log.logPrint("현재가: {}".format(self.will_account_stock_code["현재가"]))
         self.log.logPrint("buy_price: {}".format(buy_price))
         self.log.logPrint("매수개수: {}".format(quantity))
-        self.log.logPrint("매수 주문 종료")
+        self.log.logPrint("#############신규 매수 주문 종료###########")
     
     def Send_Sell_Order(self):
-        self.log.logPrint("매도 주문 시작")
+        self.log.logPrint("########매도 주문 시작#########")
 
         # 계좌평가 잔고내역 조회
         self.accout_stock_dict = {}  # 계좌평가 잔고내역 종목정보 초기화
@@ -201,7 +205,7 @@ class Kiwoom(QAxWidget):
 
             # 매도
             order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                                "신규매도", self.screen_my_info, self.account_num, 2, self.accout_stock_dict[key]["종목코드"], quantity, sell_price, "03", ""
+                                "신규매도", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매도"], self.accout_stock_dict[key]["종목코드"], quantity, sell_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""
                                 )
             
             if order_success == 0:
@@ -215,7 +219,7 @@ class Kiwoom(QAxWidget):
             self.log.logPrint("현재가: {}".format(self.accout_stock_dict[key]["현재가"]))
             self.log.logPrint("sell_price: {}".format(sell_price))
             self.log.logPrint("매도개수: {}".format(quantity))
-        self.log.logPrint("매도 주문 끝")
+        self.log.logPrint("#########매도 주문 끝#########")
     
     def Get_Real_MyAccount(self):
         self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["계좌번호"], "1")
@@ -379,16 +383,25 @@ class Kiwoom(QAxWidget):
             self.detail_account_info_event_loop.exit()
     
     def realdata_slot(self, sCode, sRealType, sRealData):
-       
-       #실시간 데이터 조회
 
-        if sRealType == "주문체결":
+       #해당 종목에 대한 실시간 데이터 조회
+       #내가 주문한거에 대한 데이터가 아니라 해당 종목에 남들이한 주문, 현재가 등등의 정보 조회
+
+       self.log.logPrint("실시간 종목 정보 조회")
+
+       """
+       if sRealType == "주문체결":
            self.log.logPrint("실시간 주문체결")
-           code = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목코드"])
-           code_nm = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목명"])
-           order_state = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["주문상태"])
-           result_price = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["체결누계금액"])
-           order_gubun = self.dynamicCall("GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["매도수구분"])
+           code = self.dynamicCall(
+               "GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목코드"])
+           code_nm = self.dynamicCall(
+               "GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["종목명"])
+           order_state = self.dynamicCall(
+               "GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["주문상태"])
+           result_price = self.dynamicCall(
+               "GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["체결누계금액"])
+           order_gubun = self.dynamicCall(
+               "GetCommRealData(QString, int)", sCode, self.realtype.REALTYPE["주문체결"]["매도수구분"])
 
            code = code.strip()
            code_nm = code.strip()
@@ -396,23 +409,102 @@ class Kiwoom(QAxWidget):
            result_price = result_price.strip()
            order_gubun = self.realtype.REALTYPE["매도수구분"][order_gubun]
 
-           if order_gubun == "매수" and order_state == "체결" : # 매수 체결 성공
+           if order_gubun == "매수" and order_state == "체결":  # 매수 체결 성공
                # 매도 시도
                self.log.logPrint("실시간 매수 체결 성공, 매도 시도")
-               self.Send_Sell_Order()
-           elif order_gubun == "매도" and order_state == "체결" :   # 매도 체결 성공
-                # 매도 정보 저장
-                self.log.logPrint("실시간 매도 체결 성공, 매도정보 저장")
-                if code in self.sell_success_stock_dict:
+               #self.Send_Sell_Order()
+           elif order_gubun == "매도" and order_state == "체결":   # 매도 체결 성공
+               # 매도 정보 저장
+               self.log.logPrint("실시간 매도 체결 성공, 매도정보 저장")
+               if code in self.sell_success_stock_dict:
                     pass
-                else:
-                    self.sell_success_stock_dict.update({code:{}})
+               else:
+                    self.sell_success_stock_dict.update({code: {}})
                     self.sell_success_stock_dict[code].update({"종목코드": code})
                     self.sell_success_stock_dict[code].update({"종목명": code_nm})
-                    self.sell_success_stock_dict[code].update({"주문상태": order_state})
-                    self.sell_success_stock_dict[code].update({"체결누계금액": result_price})
-                    self.sell_success_stock_dict[code].update({"매도수구분": order_gubun})
-                    
+                    self.sell_success_stock_dict[code].update(
+                        {"주문상태": order_state})
+                    self.sell_success_stock_dict[code].update(
+                        {"체결누계금액": result_price})
+                    self.sell_success_stock_dict[code].update(
+                        {"매도수구분": order_gubun})
+        """
+
+    def chejan_slot(self, sGubun, nItemCnt, sFIdList):
+        #내가 주문한 주문 체결 실시간 정보 조회
+        #BSTR sGubun, // 체결구분 접수와 체결시 '0'값, 국내주식 잔고전달은 '1'값, 파생잔고 전달은 '4'
+        if int(sGubun) == 0:
+            self.log.logPrint("주문 체결")
+            accountnum = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["계좌번호"])
+            code = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["종목코드"])[1:]
+            stock_name = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["종목명"])
+            order_number = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문번호"])
+            order_status = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문상태"]) #출력 : 접수, 확인, 체결
+            order_quan = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문수량"])
+            order_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문가격"])
+            not_order_quan = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["미체결수량"])
+            order_gubun = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문구분"])    # 출력 : 매도 , 매수
+            chegual_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["체결가"])
+            
+            accountnum = accountnum.strip()
+            code = code.strip()
+            stock_name = stock_name.strip()
+            order_number = order_number.strip()
+            order_status = order_status.strip()
+            order_quan = order_quan.strip()
+            order_quan = int(order_quan)
+            order_price = order_price.strip()
+            order_price = int(order_price)
+            not_order_quan = not_order_quan.strip()
+            not_order_quan = int(not_order_quan)
+            order_gubun = order_gubun.strip().lstrip('+').lstrip('-')
+            chegual_price = chegual_price.strip()
+
+            if chegual_price == '':
+                chegual_price = 0
+            else :
+                chegual_price = int(chegual_price)
+            
+            #매수 체결
+            if order_status == "체결" and order_gubun == "매수":
+                self.log.logPrint("########매수 체결 성공#########")
+                self.log.logPrint("계좌번호: {}".format(accountnum))
+                self.log.logPrint("종목코드: {}".format(code))
+                self.log.logPrint("종목명: {}".format(stock_name))
+                self.log.logPrint("주문번호: {}".format(order_number))
+                self.log.logPrint("##############################")
+                self.Send_Sell_Order()
+            #매도 체결
+            elif order_status == "체결" and order_gubun == "매도":
+                self.log.logPrint("########매도 체결 성공#########")
+                self.log.logPrint("계좌번호: {}".format(accountnum))
+                self.log.logPrint("종목코드: {}".format(code))
+                self.log.logPrint("종목명: {}".format(stock_name))
+                self.log.logPrint("주문번호: {}".format(order_number))
+                self.log.logPrint("##############################")
+                
+                self.sell_success_stock_dict.update({code: {}})
+                self.sell_success_stock_dict[code].update({"종목코드": code})
+                self.sell_success_stock_dict[code].update({"종목명": code_nm})
+                self.sell_success_stock_dict[code].update(
+                    {"주문상태": order_state})
+                self.sell_success_stock_dict[code].update(
+                    {"체결누계금액": chegual_price * order_quan })
+                self.sell_success_stock_dict[code].update(
+                    {"매도수구분": order_gubun})
+        elif int(sGubun) == 1:
+            self.log.logPrint("잔고 조회")
+        
     def Send_Sell_Sucess_Mail(self):
 
         self.detail_account_info() #예수금 정보 가져오기

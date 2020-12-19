@@ -51,37 +51,41 @@ class Kiwoom(QAxWidget):
         try:
             self.get_ocx_instance()
             self.event_slot()
-            #self.real_event_slot()
+            self.real_event_slot()
 
-            #self.signal_login_commConnect()
-            #self.get_account_info()
-            #self.detail_account_info() #예수금 정보 가져오기
-            #self.detail_account_mystock()   #계좌평가 잔고 내역
-            #self.not_concluded_account() #미체결정보 확인
-            #self.new_high_stock() #신고가 조회
-            #self.Send_Buy_Order() # 매수 주문
+            self.signal_login_commConnect()
+            self.get_account_info()
+            self.detail_account_info() #예수금 정보 가져오기
+            self.detail_account_mystock()   #계좌평가 잔고 내역
+            self.not_concluded_account() #미체결정보 확인
+            self.new_high_stock() #신고가 조회
+            self.Send_Buy_Order() # 매수 주문
 
             # 특정 종목 실시간 
             #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
             #self.Send_Sell_Order() # 매도 주문
+
+            
+            """
+            while True:
+                now = time.localtime()
+                hour = int(now.tm_hour)
+                min = int(now.tm_min)
+
+                if hour == 9 and min == 40:
+                    self.log.logPrint("{}시{}분 주식매매 종료".format(str(hour), str(min)))
+                    break
+            """
+
+            self.Send_Sell_Sucess_Mail()
+            
         except Exception as ex:
             subject = "kiwoom 자동주식 매매 실패"
-            msg = str(ex)
+            msg = ex
 
             self.log.logPrint("kiwoom 자동주식 매매 실패 cause: {}".format(msg))
-            self.objMail.SendMailMsgSet(subject, msg)
-
-        """
-        while True:
-            now = time.localtime()
-            hour = int(now.tm_hour)
-            min = int(now.tm_min)
-
-            if hour == 9 and min == 40:
-                self.log.logPrint("{}시{}분 주식매매 종료".format(str(hour), str(min)))
-                break
-        """
-        #self.Send_Sell_Sucess_Mail()
+            #self.objMail.SendMailMsgSet(subject, msg)
+        
 
         #exit()
 
@@ -95,7 +99,7 @@ class Kiwoom(QAxWidget):
         self.OnReceiveTrData.connect(self.trdata_slot)
     
     def real_event_slot(self):
-        #self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
+        self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
         self.OnReceiveChejanData(self.chejan_slot)
     
     def signal_login_commConnect(self):
@@ -168,7 +172,8 @@ class Kiwoom(QAxWidget):
         buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
 
         order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                            "신규매수", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매수"], self.will_account_stock_code["종목코드"], quantity, buy_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""
+                            ["신규매수", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매수"], 
+                            self.will_account_stock_code["종목코드"], quantity, buy_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""]
                             )
         
         if order_success == 0:
@@ -205,7 +210,8 @@ class Kiwoom(QAxWidget):
 
             # 매도
             order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                                "신규매도", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매도"], self.accout_stock_dict[key]["종목코드"], quantity, sell_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""
+                                ["신규매도", self.screen_my_info, self.account_num, int(self.realtype.REALTYPE["주문유형"]["신규매도"]), 
+                                self.accout_stock_dict[key]["종목코드"], quantity, sell_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""]
                                 )
             
             if order_success == 0:
@@ -525,7 +531,7 @@ class Kiwoom(QAxWidget):
         sendmsg = total_money + msg
 
         self.log.logPrint("Send_Sell_Success_Mail()")
-        self.log.logPrint(sendmsg)
+        self.log.logPrint(sendmsg.encode('utf-8'))
 
         self.objMail.SendMailMsgSet(subject, sendmsg)
     

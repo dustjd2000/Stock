@@ -17,7 +17,8 @@ class Main(object):
         objMail.sendMail()
 
     def start_kiwoom(self):
-        self.log.logPrint("주식 자동매매 시작")
+        self.log.logPrint("**************************************")
+        self.log.logPrint("**********주식 자동매매 시작***********")
         UI_class()
 
 if __name__ == '__main__':

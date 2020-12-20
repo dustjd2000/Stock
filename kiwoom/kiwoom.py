@@ -5,6 +5,7 @@ from config.kiwoomType import *
 from Manage.Mail import SendMail
 import time
 from logManage.logManager import LogManager
+import sys
 
 class Kiwoom(QAxWidget):
     def __init__(self):
@@ -66,7 +67,7 @@ class Kiwoom(QAxWidget):
             #self.Send_Sell_Order() # 매도 주문
 
             
-            """
+            
             while True:
                 now = time.localtime()
                 hour = int(now.tm_hour)
@@ -75,10 +76,10 @@ class Kiwoom(QAxWidget):
                 if hour == 9 and min == 40:
                     self.log.logPrint("{}시{}분 주식매매 종료".format(str(hour), str(min)))
                     break
-            """
+            
 
             self.Send_Sell_Sucess_Mail()
-            
+
         except Exception as ex:
             subject = "kiwoom 자동주식 매매 실패"
             msg = ex
@@ -88,6 +89,8 @@ class Kiwoom(QAxWidget):
         
 
         #exit()
+
+        sys.exit()
 
 
 
@@ -100,7 +103,7 @@ class Kiwoom(QAxWidget):
     
     def real_event_slot(self):
         self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
-        self.OnReceiveChejanData(self.chejan_slot)
+        self.OnReceiveChejanData.connect(self.chejan_slot)
     
     def signal_login_commConnect(self):
         self.dynamicCall("CommConnect()")
@@ -531,7 +534,7 @@ class Kiwoom(QAxWidget):
         sendmsg = total_money + msg
 
         self.log.logPrint("Send_Sell_Success_Mail()")
-        self.log.logPrint(sendmsg.encode('utf-8'))
+        self.log.logPrint(sendmsg)
 
         self.objMail.SendMailMsgSet(subject, sendmsg)
     

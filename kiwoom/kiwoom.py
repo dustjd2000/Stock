@@ -180,7 +180,7 @@ class Kiwoom(QAxWidget):
                             )
         
         if order_success == 0:
-            self.log.logPrint("신규매수 주문 완료")
+            self.log.logPrint("신규매수 주문 성공")
         else :
             self.log.logPrint("신규매수 주문 실패")
         
@@ -254,12 +254,17 @@ class Kiwoom(QAxWidget):
         
         elif sRQName == "계좌평가잔고내역":
             self.log.logPrint("계좌평가잔고내역")
+            
             total_buy_money = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총매입금액")
+            if total_buy_money == '':
+                total_buy_money = 0
             total_buy_money = int(total_buy_money)
 
             self.log.logPrint("총매입금액: {}".format(total_buy_money))
             
             total_profit_loss_rate = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총수익률(%)")
+            if total_profit_loss_rate == '':
+                total_profit_loss_rate = 0.00
             total_profit_loss_rate_result = float(total_profit_loss_rate)
 
             self.log.logPrint("총수익률(%): {}".format(total_profit_loss_rate_result))
@@ -284,12 +289,36 @@ class Kiwoom(QAxWidget):
 
                 code = code.strip()[1:]
                 code_nm = code_nm.strip()
-                stock_quantity = int(stock_quantity.strip())
-                buy_price = int(buy_price.strip())
-                learn_rate = float(learn_rate.strip())
-                current_price = int(current_price.strip())
-                total_chegual_price = int(total_chegual_price.strip())
-                possible_quantity = int(possible_quantity.strip())
+                
+                stock_quantity = stock_quantity.strip()
+                if stock_quantity == '':
+                    stock_quantity = 0
+                stock_quantity = int(stock_quantity)
+
+                buy_price = buy_price.strip()
+                if buy_price == '':
+                    buy_price = 0
+                buy_price = int(buy_price)
+
+                learn_rate = learn_rate.strip()
+                if learn_rate == '':
+                    learn_rate = 0.00
+                learn_rate = float(learn_rate)
+
+                current_price = current_price.strip()
+                if current_price == '':
+                    current_price = 0
+                current_price = int(current_price)
+
+                total_chegual_price = total_chegual_price.strip()
+                if total_chegual_price == '':
+                    total_chegual_price = 0
+                total_chegual_price = int(total_chegual_price)
+
+                possible_quantity = possible_quantity.strip()
+                if possible_quantity == '':
+                    possible_quantity = 0
+                possible_quantity = int(possible_quantity)
 
                 self.accout_stock_dict[code].update({"종목명": code_nm})
                 self.accout_stock_dict[code].update({"보유수량": stock_quantity})

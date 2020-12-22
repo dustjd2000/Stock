@@ -24,9 +24,9 @@ class Kiwoom(QAxWidget):
         self.accout_stock_dict = {}
         self.not_account_stock_dict = {}
 
-        self.will_account_stock_code = {}
-        self.sell_account_stock_dict = {}
-        self.sell_success_stock_dict = {}
+        self.will_account_stock_code = {}   # 신고가 조회
+        self.sell_account_stock_dict = {}   # 매도 시도
+        self.sell_success_stock_dict = {}   # 매도 체결성공
         ###################
 
         ##########계좌 관련변수
@@ -102,7 +102,7 @@ class Kiwoom(QAxWidget):
         self.OnReceiveTrData.connect(self.trdata_slot)
     
     def real_event_slot(self):
-        self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
+        #self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
         self.OnReceiveChejanData.connect(self.chejan_slot)
     
     def signal_login_commConnect(self):
@@ -167,12 +167,12 @@ class Kiwoom(QAxWidget):
     def Send_Buy_Order(self):
         self.log.logPrint("##########신규 매수 주문 시작###########")
 
-        result = self.use_money / self.will_account_stock_code["현재가"]
+        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
+
+        result = self.use_money / buy_price
         quantity = int(result)
 
         hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
-
-        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
 
         order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                             ["신규매수", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매수"], 
@@ -180,9 +180,9 @@ class Kiwoom(QAxWidget):
                             )
         
         if order_success == 0:
-            self.log.logPrint("신규매수 주문 성공")
+            self.log.logPrint("신규매수 주문전달 성공")
         else :
-            self.log.logPrint("신규매수 주문 실패")
+            self.log.logPrint("신규매수 주문전달 실패")
         
         self.log.logPrint("종목명: {}".format(self.will_account_stock_code["종목명"]))
         self.log.logPrint("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
@@ -195,37 +195,37 @@ class Kiwoom(QAxWidget):
         self.log.logPrint("########매도 주문 시작#########")
 
         # 계좌평가 잔고내역 조회
-        self.accout_stock_dict = {}  # 계좌평가 잔고내역 종목정보 초기화
-        self.detail_account_mystock()   #계좌평가 잔고 내역 조회
+        #self.accout_stock_dict = {}  # 계좌평가 잔고내역 종목정보 초기화
+        #self.detail_account_mystock()   #계좌평가 잔고 내역 조회
 
-        for key, value in self.accout_stock_dict:
+        for key, value in self.sell_account_stock_dict:
             # 등락율 매도가격
 
-            hoga = self.hogaUnitCalc(int(self.accout_stock_dict[key]["매입가"]))
+            hoga = self.hogaUnitCalc(int(self.sell_account_stock_dict[key]["현재가"]))
 
-            hope_price = self.accout_stock_dict[key]["매입가"] + int(self.accout_stock_dict[key]["매입가"] * self.use_sell_order_rate)
+            hope_price = self.sell_account_stock_dict[key]["매입단가"] + int(self.sell_account_stock_dict[key]["매입단가"] * self.use_sell_order_rate)
 
-            buyhoga_count = ( (hope_price - int(self.accout_stock_dict[key]["매입가"])) / hoga )
+            buyhoga_count = int( (hope_price - int(self.sell_account_stock_dict[key]["매입단가"])) / hoga )
 
-            sell_price = int(self.accout_stock_dict[key]["매입가"]) + (buyhoga_count * hoga)
+            sell_price = int(self.sell_account_stock_dict[key]["매입단가"]) + (buyhoga_count * hoga)
 
-            quantity = self.accout_stock_dict[key]["보유수량"]
+            quantity = self.sell_account_stock_dict[key]["보유수량"]
 
             # 매도
             order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                                 ["신규매도", self.screen_my_info, self.account_num, int(self.realtype.REALTYPE["주문유형"]["신규매도"]), 
-                                self.accout_stock_dict[key]["종목코드"], quantity, sell_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""]
+                                self.sell_account_stock_dict[key]["종목코드"], quantity, sell_price, self.realtype.REALTYPE["거래구분"]["지정가"], ""]
                                 )
             
             if order_success == 0:
-                self.log.logPrint("매도주문 성공")
+                self.log.logPrint("매도주문전달 성공")
             else :
-                self.log.logPrint("매도주문 실패")
+                self.log.logPrint("매도주문전달 실패")
             
             self.log.logPrint("*********************************************")
-            self.log.logPrint("종목명: {}".format(self.accout_stock_dict[key]["종목명"]))
-            self.log.logPrint("종목코드: {}".format(self.accout_stock_dict[key]["종목코드"]))
-            self.log.logPrint("현재가: {}".format(self.accout_stock_dict[key]["현재가"]))
+            self.log.logPrint("종목명: {}".format(self.sell_account_stock_dict[key]["종목명"]))
+            self.log.logPrint("종목코드: {}".format(self.sell_account_stock_dict[key]["종목코드"]))
+            self.log.logPrint("현재가: {}".format(self.sell_account_stock_dict[key]["현재가"]))
             self.log.logPrint("sell_price: {}".format(sell_price))
             self.log.logPrint("매도개수: {}".format(quantity))
         self.log.logPrint("#########매도 주문 끝#########")
@@ -472,7 +472,7 @@ class Kiwoom(QAxWidget):
         #내가 주문한 주문 체결 실시간 정보 조회
         #BSTR sGubun, // 체결구분 접수와 체결시 '0'값, 국내주식 잔고전달은 '1'값, 파생잔고 전달은 '4'
         if int(sGubun) == 0:
-            self.log.logPrint("주문 체결")
+            self.log.logPrint("chejan 주문 체결")
             accountnum = self.dynamicCall(
                "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["계좌번호"])
             code = self.dynamicCall(
@@ -500,11 +500,26 @@ class Kiwoom(QAxWidget):
             order_number = order_number.strip()
             order_status = order_status.strip()
             order_quan = order_quan.strip()
-            order_quan = int(order_quan)
+
+            if order_quan == '':
+                order_quan = 0
+            else :
+                order_quan = int(order_quan)
+
             order_price = order_price.strip()
-            order_price = int(order_price)
+
+            if order_price == '':
+                order_price = 0
+            else :
+                order_price = int(order_price)
+            
             not_order_quan = not_order_quan.strip()
-            not_order_quan = int(not_order_quan)
+
+            if not_order_quan == '':
+                not_order_quan = 0
+            else :
+                not_order_quan = int(not_order_quan)
+
             order_gubun = order_gubun.strip().lstrip('+').lstrip('-')
             chegual_price = chegual_price.strip()
 
@@ -521,7 +536,6 @@ class Kiwoom(QAxWidget):
                 self.log.logPrint("종목명: {}".format(stock_name))
                 self.log.logPrint("주문번호: {}".format(order_number))
                 self.log.logPrint("##############################")
-                self.Send_Sell_Order()
             #매도 체결
             elif order_status == "체결" and order_gubun == "매도":
                 self.log.logPrint("########매도 체결 성공#########")
@@ -533,20 +547,102 @@ class Kiwoom(QAxWidget):
                 
                 self.sell_success_stock_dict.update({code: {}})
                 self.sell_success_stock_dict[code].update({"종목코드": code})
-                self.sell_success_stock_dict[code].update({"종목명": code_nm})
+                self.sell_success_stock_dict[code].update({"종목명": stock_name})
                 self.sell_success_stock_dict[code].update(
-                    {"주문상태": order_state})
+                    {"주문상태": order_status})
                 self.sell_success_stock_dict[code].update(
                     {"체결누계금액": chegual_price * order_quan })
                 self.sell_success_stock_dict[code].update(
                     {"매도수구분": order_gubun})
         elif int(sGubun) == 1:
-            self.log.logPrint("잔고 조회")
-        
+            self.log.logPrint("chejan 잔고 조회")
+
+            account_num = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["계좌번호"])
+            sCode = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["종목코드"])[1:]
+            stock_name = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["종목명"])
+            current_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["현재가"])
+            stoc_quan = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["보유수량"])
+            like_quan = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["주문가능수량"])
+            buy_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["매입단가"])
+            total_buy_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["총매입가"])
+            meme_gubun = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["잔고"]["매도/매수구분"])
+            
+            account_num = account_num.strip()
+            sCode = sCode.strip()
+            stock_name = stock_name.strip()
+            current_price = current_price.strip()
+
+            if current_price == '':
+                current_price = 0
+            else :
+                current_price = abs(int(current_price))
+
+            stoc_quan = stoc_quan.strip()
+
+            if stoc_quan == '':
+                stoc_quan = 0
+            else :
+                stoc_quan = int(stoc_quan)
+
+            like_quan = like_quan.strip()
+
+            if like_quan == '':
+                like_quan = 0
+            else :
+                like_quan = int(like_quan)
+
+            buy_price = buy_price.strip()
+
+            if buy_price == '':
+                buy_price = 0
+            else :
+                buy_price = abs(int(buy_price))
+
+            total_buy_price = total_buy_price.strip()
+
+            if total_buy_price == '':
+                total_buy_price = 0
+            else :
+                total_buy_price = abs(int(total_buy_price))
+
+            meme_gubun = meme_gubun.strip()
+            meme_gubun = self.realtype.REALTYPE["매도수구분"][meme_gubun]
+
+            if sCode in self.sell_account_stock_dict.keys():
+                pass
+            else :
+                self.sell_account_stock_dict.update({sCode:{}})
+
+                self.sell_account_stock_dict[sCode].update({"현재가": current_price})
+                self.sell_account_stock_dict[sCode].update({"종목코드": sCode})
+                self.sell_account_stock_dict[sCode].update({"종목명": stock_name})
+                self.sell_account_stock_dict[sCode].update({"보유수량": stoc_quan})
+                self.sell_account_stock_dict[sCode].update({"주문가능수량": like_quan})
+                self.sell_account_stock_dict[sCode].update({"매입단가": buy_price})
+                self.sell_account_stock_dict[sCode].update({"총매입가": total_buy_price})
+                self.sell_account_stock_dict[sCode].update({"매도매수구분": meme_gubun})
+
+                self.log.logPrint("잔고 매도수구분: {}".format(meme_gubun))
+
+            if stoc_quan == 0:
+                del self.sell_account_stock_dict[sCode]
+                self.dynamicCall("SetRealRemove(QString, QString)", self.screen_my_info, sCode)     # 실시간 정보 끊기 해당 종목 스크린에서
+            else :
+                self.Send_Sell_Order()
+
     def Send_Sell_Sucess_Mail(self):
 
         self.detail_account_info() #예수금 정보 가져오기
-
+        account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
         total_money = "예수금: {}".format(self.use_money_origin) + "\n\n"
         
         msg = "내역 : \n"
@@ -560,7 +656,7 @@ class Kiwoom(QAxWidget):
             msg += "**********************************" + "\n" 
 
         subject = "Kiwoom 자동주식매매 Sell_Success"
-        sendmsg = total_money + msg
+        sendmsg = account_num + total_money + msg
 
         self.log.logPrint("Send_Sell_Success_Mail()")
         self.log.logPrint(sendmsg)

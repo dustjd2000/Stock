@@ -67,7 +67,7 @@ class Kiwoom(QAxWidget):
             #self.Send_Sell_Order() # 매도 주문
 
             
-            
+            """
             while True:
                 now = time.localtime()
                 hour = int(now.tm_hour)
@@ -79,6 +79,7 @@ class Kiwoom(QAxWidget):
             
 
             self.Send_Sell_Sucess_Mail()
+            """
 
         except Exception as ex:
             subject = "kiwoom 자동주식 매매 실패"
@@ -90,7 +91,7 @@ class Kiwoom(QAxWidget):
 
         #exit()
 
-        sys.exit()
+        #sys.exit()
 
 
 
@@ -167,12 +168,12 @@ class Kiwoom(QAxWidget):
     def Send_Buy_Order(self):
         self.log.logPrint("##########신규 매수 주문 시작###########")
 
+        hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
+
         buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
 
         result = self.use_money / buy_price
         quantity = int(result)
-
-        hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
 
         order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
                             ["신규매수", self.screen_my_info, self.account_num, self.realtype.REALTYPE["주문유형"]["신규매수"], 
@@ -554,6 +555,8 @@ class Kiwoom(QAxWidget):
                     {"체결누계금액": chegual_price * order_quan })
                 self.sell_success_stock_dict[code].update(
                     {"매도수구분": order_gubun})
+
+                self.Send_Sell_Sucess_Mail()
         elif int(sGubun) == 1:
             self.log.logPrint("chejan 잔고 조회")
 

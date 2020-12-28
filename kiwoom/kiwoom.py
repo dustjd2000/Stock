@@ -62,7 +62,13 @@ class Kiwoom(QAxWidget):
             self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
             self.detail_account_mystock()   #계좌평가 잔고 내역
             self.not_concluded_account() #미체결정보 확인
-            self.new_high_stock() #신고가 조회
+
+            while(True):
+                self.new_high_stock() #신고가 조회
+                
+                if self.will_account_stock_code.keys() :
+                    break
+            
             self.Send_Buy_Order() # 매수 주문
 
             # 특정 종목 실시간 
@@ -108,6 +114,7 @@ class Kiwoom(QAxWidget):
     def real_event_slot(self):
         #self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
         self.OnReceiveChejanData.connect(self.chejan_slot)
+        self.OnReceiveMsg.connect(self.receiveMsg)
     
     def signal_login_commConnect(self):
         self.dynamicCall("CommConnect()")
@@ -252,6 +259,9 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["계좌번호"], "1")
         #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["예수금"], "2")
         #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["손익율"], "3")
+    
+    def stop_screen_cancel(self, sScrNo):
+        self.dynamicCall("DisconnectRealData(QString)", sScrNo)
    
     def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
         
@@ -267,6 +277,8 @@ class Kiwoom(QAxWidget):
 
             ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
             self.log.logPrint("출금가능금액: {}".format(int(ok_deposit)))
+
+            #self.stop_screen_cancel(self.screen_my_info)
 
             self.detail_account_info_event_loop.exit()
         
@@ -683,10 +695,9 @@ class Kiwoom(QAxWidget):
                 self.Send_Sell_Order()
 
     def Send_Sell_Sucess_Mail(self):
-
-        #self.detail_account_info("3000") #예수금 정보 가져오기
+        #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        #total_money = "예수금: {}".format(self.use_money_origin) + "\n\n"
+        total_money = "예수금: {}".format(self.use_money_origin) + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"
@@ -721,3 +732,16 @@ class Kiwoom(QAxWidget):
             hogaUnit = 100
         
         return hogaUnit
+
+    def receiveMsg(self, screenNo, requestName, trCode, msg):
+        """
+        수신 메시지 이벤트
+        서버로 어떤 요청을 했을 때(로그인, 주문, 조회 등), 그 요청에 대한 처리내용을 전달해준다.
+        :param screenNo: string - 화면번호(4자리, 사용자 정의, 서버에 조회나 주문을 요청할 때 이 요청을 구별하기 위한 키값)
+        :param requestName: string - TR 요청명(사용자 정의)
+        :param trCode: string
+        :param msg: string - 서버로 부터의 메시지
+        """
+
+        msg = "receiveMsg() - " + requestName + ": " + msg + "\n"
+        self.log.logPrint(msg)

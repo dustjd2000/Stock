@@ -67,6 +67,7 @@ class Kiwoom(QAxWidget):
                 self.new_high_stock() #신고가 조회
                 
                 if self.will_account_stock_code.keys() :
+                    self.merge_sell_account()
                     break
             
             self.Send_Buy_Order() # 매수 주문
@@ -387,6 +388,7 @@ class Kiwoom(QAxWidget):
                 order_gubun = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "주문구분")
                 not_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "미체결수량")
                 ok_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "체결량")
+                current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "현재가")
 
                 code = code.strip()
                 code_nm = code_nm.strip()
@@ -397,6 +399,7 @@ class Kiwoom(QAxWidget):
                 order_gubun = order_gubun.strip().lstrip('+').lstrip('-')
                 not_quantity = int(not_quantity.strip())
                 ok_quantity = int(ok_quantity.strip())
+                current_price = int(current_price.strip())
 
                 if order_no in self.not_account_stock_dict:
                     pass
@@ -412,6 +415,7 @@ class Kiwoom(QAxWidget):
                 self.not_account_stock_dict[order_no].update({"주문구분": order_gubun})
                 self.not_account_stock_dict[order_no].update({"미체결수량": not_quantity})
                 self.not_account_stock_dict[order_no].update({"체결량": ok_quantity})
+                self.not_account_stock_dict[order_no].update({"현재가": current_price})
                 
                 self.log.logPrint("미체결 종목: {}".format(self.not_account_stock_dict[order_no]))
                 cnt += 1
@@ -442,14 +446,18 @@ class Kiwoom(QAxWidget):
                     
                     if up_down_rate_temp == self.use_up_down_rate_percent or up_down_rate_temp == self.use_up_down_rate_percent +1 or up_down_rate_temp == self.use_up_down_rate_percent +2:
                         if self.use_money > current_price and current_price < 100000:
-                            self.will_account_stock_code.update({"종목코드": code})
-                            self.will_account_stock_code.update({"종목명": code_nm})
-                            self.will_account_stock_code.update({"현재가": current_price})
-                            self.will_account_stock_code.update({"등락률": up_down_rate})
-                            self.will_account_stock_code.update({"거래량": trade_count})
+                            
+                            if code in self.will_account_stock_code:
+                                continue
+                            else:
+                                self.will_account_stock_code.update({"종목코드": code})
+                                self.will_account_stock_code.update({"종목명": code_nm})
+                                self.will_account_stock_code.update({"현재가": current_price})
+                                self.will_account_stock_code.update({"등락률": up_down_rate})
+                                self.will_account_stock_code.update({"거래량": trade_count})
 
-                            self.log.logPrint("신고가 종목: {}".format(self.will_account_stock_code))
-                            cnt += 1
+                                self.log.logPrint("신고가 종목: {}".format(self.will_account_stock_code))
+                                cnt += 1
 
             self.log.logPrint("신고가count: {}".format(cnt))  
             
@@ -697,7 +705,7 @@ class Kiwoom(QAxWidget):
     def Send_Sell_Sucess_Mail(self):
         #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        total_money = "예수금: {}".format(self.use_money_origin) + "\n\n"
+        total_money = "기존 예수금: {}".format(self.use_money_origin) + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"
@@ -745,3 +753,26 @@ class Kiwoom(QAxWidget):
 
         msg = "receiveMsg() - " + requestName + ": " + msg + "\n"
         self.log.logPrint(msg)
+    
+    def merge_sell_account(self):
+        
+        if not self.not_account_stock_dict.keys():
+            return
+
+        for order_no in self.not_account_stock_dict:
+            code = self.not_account_stock_dict[order_no]["종목코드"]
+            stock_name = self.not_account_stock_dict[order_no]["종목명"]
+            current_price = self.not_account_stock_dict[order_no]["현재가"]
+            stoc_quan = self.not_account_stock_dict[order_no]["미체결수량"]
+            buy_price = self.not_account_stock_dict[order_no]["주문가격"]
+
+            if code in self.sell_account_stock_dict.keys():
+                continue
+            else:
+                self.sell_account_stock_dict[code] = {}
+
+                self.sell_account_stock_dict[code].update({"현재가": current_price})
+                self.sell_account_stock_dict[code].update({"종목코드": code})
+                self.sell_account_stock_dict[code].update({"종목명": stock_name})
+                self.sell_account_stock_dict[code].update({"보유수량": stoc_quan})
+                self.sell_account_stock_dict[code].update({"매입단가": buy_price})

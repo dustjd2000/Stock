@@ -64,11 +64,14 @@ class Kiwoom(QAxWidget):
             self.not_concluded_account() #미체결정보 확인
 
             while(True):
-                self.new_high_stock() #신고가 조회
+                #self.new_high_stock() #신고가 
+                self.high_stock() #가격급등락
                 
                 if self.will_account_stock_code.keys() :
                     self.merge_sell_account()
                     break
+                else:
+                    time.sleep(60)
             
             self.Send_Buy_Order() # 매수 주문
 
@@ -173,6 +176,16 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "시장구분", "000")
         self.dynamicCall("SetInputValue(String, String)", "신고저구분", "1")
         self.dynamicCall("CommRqData(String, String, int, String)","신고가요청","OPT10016", sPrevNext, self.screen_my_info)
+
+        self.detail_account_info_event_loop.exec_()
+    
+    def high_stock(self, sPrevNext="0"):
+        print("가격급등 조회")
+        self.dynamicCall("SetInputValue(String, String)", "시장구분", "000")
+        self.dynamicCall("SetInputValue(String, String)", "등락구분", "1") # 1: 급등, 2: 급락
+        self.dynamicCall("SetInputValue(String, String)", "시간구분", "1") # 1: 분전, 2: 일전
+        self.dynamicCall("SetInputValue(String, String)", "거래량구분", "00050") # 5만주이상
+        self.dynamicCall("CommRqData(String, String, int, String)","가격급등락요청","opt10019", sPrevNext, self.screen_my_info)
 
         self.detail_account_info_event_loop.exec_()
     
@@ -462,6 +475,49 @@ class Kiwoom(QAxWidget):
             self.log.logPrint("신고가count: {}".format(cnt))  
             
             self.detail_account_info_event_loop.exit()
+        
+        elif sRQName == "가격급등락요청":
+            self.log.logPrint("가격급등락요청")
+            rows = self.dynamicCall("GetRepeatCnt(QString, QString)",sTrCode, sRQName) #최대조회개수 20개
+            cnt = 0
+            for i in range(rows):
+                code = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목코드")
+                code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "종목명")
+                current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "현재가")
+                up_down_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "등락률")
+                trade_count = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "거래량")
+                high_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "급등률")
+
+                code = code.strip()
+                code_nm = code_nm.strip()
+                current_price = int(current_price.strip())
+                up_down_rate = up_down_rate.strip()
+                trade_count = trade_count.strip()
+                high_rate = high_rate.strip()
+
+                if '+' in high_rate:     #등락률 +
+                    high_rate_temp = int(float(high_rate[1:]))
+                    
+                    if high_rate_temp == self.use_up_down_rate_percent or high_rate_temp == self.use_up_down_rate_percent +1 or high_rate_temp == self.use_up_down_rate_percent +2:
+                        if self.use_money > current_price and current_price < 100000:
+                            
+                            if code in self.will_account_stock_code:
+                                continue
+                            else:
+                                self.will_account_stock_code.update({"종목코드": code})
+                                self.will_account_stock_code.update({"종목명": code_nm})
+                                self.will_account_stock_code.update({"현재가": current_price})
+                                self.will_account_stock_code.update({"등락률": up_down_rate})
+                                self.will_account_stock_code.update({"거래량": trade_count})
+                                self.will_account_stock_code.update({"급등률": high_rate})
+
+                                self.log.logPrint("가격급등 종목: {}".format(self.will_account_stock_code))
+                                cnt += 1
+                                break
+
+            self.log.logPrint("가격급등count: {}".format(cnt))  
+            
+            self.detail_account_info_event_loop.exit()
     
     def realdata_slot(self, sCode, sRealType, sRealData):
 
@@ -583,6 +639,18 @@ class Kiwoom(QAxWidget):
                 self.log.logPrint("##############################")
 
                 self.will_account_stock_code_finish.remove(code)
+
+                subject = "매수 체결"
+                msg = "########매수 체결 성공#########" + "\n"
+                msg += "계좌번호: {}".format(accountnum) + "\n"
+                msg += "종목코드: {}".format(code) + "\n"
+                msg += "종목명: {}".format(stock_name) + "\n"
+                msg += "주문번호: {}".format(order_number) + "\n"
+                msg += "주문상태: {}".format(order_status) + "\n"
+                msg += "주문구분: {}".format(order_gubun) + "\n"
+                msg += "##############################" + "\n"
+                
+                self.objMail.SendMailMsgSet(subject, msg)
                     
                 
             #매도 체결

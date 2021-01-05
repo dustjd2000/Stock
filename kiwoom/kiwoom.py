@@ -71,7 +71,7 @@ class Kiwoom(QAxWidget):
                     self.merge_sell_account()
                     break
                 else:
-                    time.sleep(60)
+                    time.sleep(30)
             
             self.Send_Buy_Order() # 매수 주문
 
@@ -350,9 +350,11 @@ class Kiwoom(QAxWidget):
                 learn_rate = float(learn_rate)
 
                 current_price = current_price.strip()
+                
                 if current_price == '':
                     current_price = 0
                 current_price = int(current_price)
+                current_price = abs(current_price)
 
                 total_chegual_price = total_chegual_price.strip()
                 if total_chegual_price == '':
@@ -413,6 +415,7 @@ class Kiwoom(QAxWidget):
                 not_quantity = int(not_quantity.strip())
                 ok_quantity = int(ok_quantity.strip())
                 current_price = int(current_price.strip())
+                current_price = abs(current_price)
 
                 if order_no in self.not_account_stock_dict:
                     pass
@@ -451,6 +454,7 @@ class Kiwoom(QAxWidget):
                 code = code.strip()
                 code_nm = code_nm.strip()
                 current_price = int(current_price.strip())
+                current_price = abs(current_price)
                 up_down_rate = up_down_rate.strip()
                 trade_count = trade_count.strip()
 
@@ -491,11 +495,12 @@ class Kiwoom(QAxWidget):
                 code = code.strip()
                 code_nm = code_nm.strip()
                 current_price = int(current_price.strip())
+                current_price = abs(current_price)
                 up_down_rate = up_down_rate.strip()
                 trade_count = trade_count.strip()
                 high_rate = high_rate.strip()
 
-                if '+' in high_rate:     #등락률 +
+                if '+' in high_rate and '-' not in up_down_rate:     #등락률 +
                     high_rate_temp = int(float(high_rate[1:]))
                     
                     if high_rate_temp == self.use_up_down_rate_percent or high_rate_temp == self.use_up_down_rate_percent +1 or high_rate_temp == self.use_up_down_rate_percent +2:
@@ -710,6 +715,8 @@ class Kiwoom(QAxWidget):
                 current_price = 0
             else :
                 current_price = abs(int(current_price))
+            
+            current_price = abs(current_price)
 
             stoc_quan = stoc_quan.strip()
 
@@ -792,6 +799,9 @@ class Kiwoom(QAxWidget):
         self.log.logPrint(sendmsg)
 
         self.objMail.SendMailMsgSet(subject, sendmsg)
+
+        self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
+        self.objMail.SendMailMsgSet("Sell_Success 예수금", "예수금: " + self.use_money_origin)
     
     def hogaUnitCalc(self, price):
         hogaUnit = 1
@@ -831,6 +841,7 @@ class Kiwoom(QAxWidget):
             code = self.not_account_stock_dict[order_no]["종목코드"]
             stock_name = self.not_account_stock_dict[order_no]["종목명"]
             current_price = self.not_account_stock_dict[order_no]["현재가"]
+            current_price = abs(int(current_price))
             stoc_quan = self.not_account_stock_dict[order_no]["미체결수량"]
             buy_price = self.not_account_stock_dict[order_no]["주문가격"]
 

@@ -799,9 +799,6 @@ class Kiwoom(QAxWidget):
         self.log.logPrint(sendmsg)
 
         self.objMail.SendMailMsgSet(subject, sendmsg)
-
-        self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
-        self.objMail.SendMailMsgSet("Sell_Success 예수금", "예수금: " + self.use_money_origin)
     
     def hogaUnitCalc(self, price):
         hogaUnit = 1

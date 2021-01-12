@@ -61,7 +61,7 @@ class Kiwoom(QAxWidget):
             self.get_account_info()
             self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
             self.detail_account_mystock()   #계좌평가 잔고 내역
-            self.not_concluded_account() #미체결정보 확인
+            #self.not_concluded_account() #미체결정보 확인
 
             while(True):
                 #self.new_high_stock() #신고가 
@@ -325,11 +325,6 @@ class Kiwoom(QAxWidget):
                 current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "현재가")
                 total_chegual_price = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "매입금액")
                 possible_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)",sTrCode, sRQName, i, "매매가능수량")
-
-                if code in self.accout_stock_dict:
-                    pass
-                else:
-                    self.accout_stock_dict.update({code:{}})
 
                 code = code.strip()[1:]
                 code_nm = code_nm.strip()
@@ -831,16 +826,16 @@ class Kiwoom(QAxWidget):
     
     def merge_sell_account(self):
         
-        if not self.not_account_stock_dict.keys():
+        if not self.accout_stock_dict.keys():
             return
 
-        for order_no in self.not_account_stock_dict:
-            code = self.not_account_stock_dict[order_no]["종목코드"]
-            stock_name = self.not_account_stock_dict[order_no]["종목명"]
-            current_price = self.not_account_stock_dict[order_no]["현재가"]
+        for acc_code in self.accout_stock_dict:
+            code = acc_code
+            stock_name = self.accout_stock_dict[acc_code]["종목명"]
+            current_price = self.accout_stock_dict[acc_code]["현재가"]
             current_price = abs(int(current_price))
-            stoc_quan = self.not_account_stock_dict[order_no]["미체결수량"]
-            buy_price = self.not_account_stock_dict[order_no]["주문가격"]
+            stoc_quan = self.accout_stock_dict[acc_code]["매매가능수량"]
+            buy_price = self.accout_stock_dict[acc_code]["매입가"]
 
             if code in self.sell_account_stock_dict.keys():
                 continue

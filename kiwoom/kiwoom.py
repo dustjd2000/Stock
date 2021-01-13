@@ -38,7 +38,7 @@ class Kiwoom(QAxWidget):
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
         self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
         self.use_sell_order_rate = 0.04 # 매도 주문 조건 등락율 *100 %
-        self.use_buy_price_rate = 3 # 매수 주문 현재가 대상 호가 *
+        self.use_buy_price_rate = 2 # 매수 주문 현재가 대상 호가 *
         
         ####################
 

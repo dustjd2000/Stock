@@ -38,7 +38,7 @@ class Kiwoom(QAxWidget):
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
         self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
         self.use_sell_order_rate = 0.04 # 매도 주문 조건 등락율 *100 %
-        self.use_buy_price_rate = 2 # 매수 주문 현재가 대상 호가 *
+        self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
         
         ####################
 
@@ -200,7 +200,7 @@ class Kiwoom(QAxWidget):
         hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
 
         buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
-
+        
         result = self.use_money / buy_price
         quantity = int(result)
 
@@ -799,9 +799,9 @@ class Kiwoom(QAxWidget):
         hogaUnit = 1
 
         if price < 1000:
-            hogaUnit = 1
+            hogaUnit = 10   # origin 1      주문단가 잘못입력 에러 방지
         elif price < 5000:
-            hogaUnit = 5
+            hogaUnit = 10   # origin 5      주문단가 잘못입력 에러 방지
         elif price < 10000:
             hogaUnit = 10
         elif price < 50000:

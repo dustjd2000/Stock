@@ -199,7 +199,7 @@ class Kiwoom(QAxWidget):
 
         hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
 
-        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
+        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate) 
         
         result = self.use_money / buy_price
         quantity = int(result)

@@ -6,6 +6,7 @@ from Manage.Mail import SendMail
 import time
 from logManage.logManager import LogManager
 import sys
+import os
 
 class Kiwoom(QAxWidget):
     def __init__(self):
@@ -63,6 +64,9 @@ class Kiwoom(QAxWidget):
             self.detail_account_mystock()   #계좌평가 잔고 내역
             #self.not_concluded_account() #미체결정보 확인
 
+            #장 시작, 끝 확인
+            self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["장시작시간"]["장운영구분"], "0")
+
             while(True):
                 #self.new_high_stock() #신고가 
                 self.high_stock() #가격급등락
@@ -116,7 +120,7 @@ class Kiwoom(QAxWidget):
         self.OnReceiveTrData.connect(self.trdata_slot)
     
     def real_event_slot(self):
-        #self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
+        self.OnReceiveRealData.connect(self.realdata_slot)  # 특정 종목 실시간 정보 조회
         self.OnReceiveChejanData.connect(self.chejan_slot)
         self.OnReceiveMsg.connect(self.receiveMsg)
     
@@ -199,7 +203,11 @@ class Kiwoom(QAxWidget):
 
         hoga = self.hogaUnitCalc( int(self.will_account_stock_code["현재가"]) )
 
-        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate) 
+        buy_price = self.will_account_stock_code["현재가"] + (hoga * self.use_buy_price_rate)
+
+        won_1 = buy_price % 10
+
+        buy_price = buy_price - won_1
         
         result = self.use_money / buy_price
         quantity = int(result)
@@ -245,6 +253,10 @@ class Kiwoom(QAxWidget):
             sell_price = int(
                  self.sell_account_stock_dict[sCode]["매입단가"]) + (buyhoga_count * hoga)
 
+            won_1 = sell_price % 10
+
+            sell_price = sell_price - won_1
+
             quantity = self.sell_account_stock_dict[sCode]["보유수량"]
 
               # 매도
@@ -268,11 +280,6 @@ class Kiwoom(QAxWidget):
 
             self.sell_success_stock_dict_finish.append(sCode)
         self.log.logPrint("#########매도 주문 끝#########")
-    
-    def Get_Real_MyAccount(self):
-        self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["계좌번호"], "1")
-        #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["예수금"], "2")
-        #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["잔고"]["손익율"], "3")
     
     def stop_screen_cancel(self, sScrNo):
         self.dynamicCall("DisconnectRealData(QString)", sScrNo)
@@ -524,7 +531,21 @@ class Kiwoom(QAxWidget):
        #해당 종목에 대한 실시간 데이터 조회
        #내가 주문한거에 대한 데이터가 아니라 해당 종목에 남들이한 주문, 현재가 등등의 정보 조회
 
-       self.log.logPrint("실시간 종목 정보 조회")
+       if sRealType == "장시작시간":
+           fid = self.realtype.REALTYPE["장시작시간"]["장운영구분"]
+           value = self.dynamicCall("GetCommRealData(QString, int)", sCode, fid)
+
+           if value == '0':
+                self.log.logPrint("장 시작 전")
+           elif value == '3':
+                self.log.logPrint("장 시작")
+           elif value == '2':
+                self.log.logPrint("장 종료, 동시호가로 넘어감")
+           elif value == '4':
+                self.log.logPrint("3시 30분, 장 종료")
+                
+                os.system("taskkill / f / im cmd.exe")
+                #sys.exit()
 
        """
        if sRealType == "주문체결":

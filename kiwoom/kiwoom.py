@@ -540,11 +540,12 @@ class Kiwoom(QAxWidget):
            elif value == '3':
                 self.log.logPrint("장 시작")
            elif value == '2':
-                self.log.logPrint("장 종료, 동시호가로 넘어감")
+                #self.log.logPrint("장 종료, 동시호가로 넘어감")
+                pass
            elif value == '4':
                 self.log.logPrint("3시 30분, 장 종료")
                 
-                os.system("taskkill / f / im cmd.exe")
+                os.system("taskkill /F /im cmd.exe /T")
                 #sys.exit()
 
        """
@@ -765,13 +766,27 @@ class Kiwoom(QAxWidget):
             #meme_gubun = meme_gubun.strip()
             #meme_gubun = self.realtype.REALTYPE["매도수구분"][meme_gubun]
 
-            sCode_Check = False
+            if stoc_quan > 0 :
+                self.log.logPrint("########chejan 잔고 정보#########")
+                self.log.logPrint("현재가: {}".format(current_price))
+                self.log.logPrint("종목코드: {}".format(sCode))
+                self.log.logPrint("종목명: {}".format(stock_name))
+                self.log.logPrint("보유수량: {}".format(stoc_quan))
+                self.log.logPrint("주문가능수량: {}".format(like_quan))
+                self.log.logPrint("매입단가: {}".format(buy_price))
+                self.log.logPrint("##############################")
 
             if sCode in self.sell_account_stock_dict.keys():
-                sCode_Check = False
-                pass
+
+                self.sell_account_stock_dict[sCode].update({"현재가": current_price})
+                self.sell_account_stock_dict[sCode].update({"종목코드": sCode})
+                self.sell_account_stock_dict[sCode].update({"종목명": stock_name})
+                self.sell_account_stock_dict[sCode].update({"보유수량": stoc_quan})
+                self.sell_account_stock_dict[sCode].update({"주문가능수량": like_quan})
+                self.sell_account_stock_dict[sCode].update({"매입단가": buy_price})
+                self.sell_account_stock_dict[sCode].update({"총매입가": total_buy_price})
             else :
-                sCode_Check = True
+                
                 self.sell_account_stock_dict.update({sCode:{}})
 
                 self.sell_account_stock_dict[sCode].update({"현재가": current_price})
@@ -787,10 +802,10 @@ class Kiwoom(QAxWidget):
 
             if stoc_quan == 0:  # 매도 체결 끝났을때 
                 self.log.logPrint("보유수량0처리 종목코드: {}, 종목명: {}".format(sCode,stock_name))
-                self.Send_Sell_Sucess_Mail()
                 del self.sell_account_stock_dict[sCode]
                 self.dynamicCall("SetRealRemove(QString, QString)", self.screen_my_info, sCode)     # 실시간 정보 끊기 해당 종목 스크린에서
-            elif sCode_Check and sCode not in self.sell_success_stock_dict_finish:
+                self.Send_Sell_Sucess_Mail()
+            else:
                 self.Send_Sell_Order()
 
     def Send_Sell_Sucess_Mail(self):

@@ -37,9 +37,11 @@ class Kiwoom(QAxWidget):
         self.use_money_origin = 0 # 보유 예수금
         self.use_money = 0  # 보유 예수금 주식주문 비용
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
-        self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
-        self.use_sell_order_rate = 0.04 # 매도 주문 조건 등락율 *100 %
+        self.use_up_down_rate_percent = 6 # 신고가 조회 등락율 %
+        self.use_sell_order_rate = 0.03 # 매도 주문 조건 등락율 *100 %
         self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
+
+        self.my_account_money = 0 # 계좌 잔고 계산용
         
         ####################
 
@@ -188,7 +190,7 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "시장구분", "000")
         self.dynamicCall("SetInputValue(String, String)", "등락구분", "1") # 1: 급등, 2: 급락
         self.dynamicCall("SetInputValue(String, String)", "시간구분", "1") # 1: 분전, 2: 일전
-        self.dynamicCall("SetInputValue(String, String)", "거래량구분", "00050") # 5만주이상
+        self.dynamicCall("SetInputValue(String, String)", "거래량구분", "00010") # 1만주이상 ,  00050 5만주
         self.dynamicCall("CommRqData(String, String, int, String)","가격급등락요청","opt10019", sPrevNext, self.screen_my_info)
 
         self.detail_account_info_event_loop.exec_()
@@ -257,7 +259,7 @@ class Kiwoom(QAxWidget):
 
             sell_price = sell_price - won_1
 
-            quantity = self.sell_account_stock_dict[sCode]["보유수량"]
+            quantity = self.sell_account_stock_dict[sCode]["주문가능수량"]
 
               # 매도
             order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
@@ -292,6 +294,7 @@ class Kiwoom(QAxWidget):
             self.log.logPrint("예수금: {}".format(int(deposit)))
 
             self.use_money_origin = int(deposit)
+            self.my_account_money = self.use_money_origin
 
             self.use_money = int(deposit) * self.use_money_percent
             #self.use_money = int(self.use_money / 4)
@@ -673,6 +676,8 @@ class Kiwoom(QAxWidget):
                 msg += "##############################" + "\n"
                 
                 self.objMail.SendMailMsgSet(subject, msg)
+
+                self.my_account_money = self.my_account_money - (chegual_price * order_quan)
                     
                 
             #매도 체결
@@ -698,6 +703,8 @@ class Kiwoom(QAxWidget):
                     {"체결누계금액": chegual_price * order_quan })
                 self.sell_success_stock_dict[code].update(
                     {"매도수구분": order_gubun})
+                
+                self.my_account_money = self.my_account_money + (chegual_price * order_quan)
 
                 
         elif int(sGubun) == 1:
@@ -805,13 +812,13 @@ class Kiwoom(QAxWidget):
                 del self.sell_account_stock_dict[sCode]
                 self.dynamicCall("SetRealRemove(QString, QString)", self.screen_my_info, sCode)     # 실시간 정보 끊기 해당 종목 스크린에서
                 self.Send_Sell_Sucess_Mail()
-            else:
+            elif like_quan > 0:
                 self.Send_Sell_Order()
 
     def Send_Sell_Sucess_Mail(self):
         #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        total_money = "기존 예수금: {}".format(self.use_money_origin) + "\n\n"
+        total_money = "현재 예수금: {}".format(self.my_account_money) + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"
@@ -881,5 +888,6 @@ class Kiwoom(QAxWidget):
                 self.sell_account_stock_dict[code].update({"현재가": current_price})
                 self.sell_account_stock_dict[code].update({"종목코드": code})
                 self.sell_account_stock_dict[code].update({"종목명": stock_name})
-                self.sell_account_stock_dict[code].update({"보유수량": stoc_quan})
+                self.sell_account_stock_dict[code].update({"보유수량": stoc_quan})  
+                self.sell_account_stock_dict[code].update({"주문가능수량": stoc_quan})
                 self.sell_account_stock_dict[code].update({"매입단가": buy_price})

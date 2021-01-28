@@ -62,14 +62,15 @@ class Kiwoom(QAxWidget):
 
             self.signal_login_commConnect()
             self.get_account_info()
-            self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
+            #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
+            self.detail_account_info2(self.screen_my_info) #매수가능 금액 계산
             self.detail_account_mystock()   #계좌평가 잔고 내역
             #self.not_concluded_account() #미체결정보 확인
 
-            self.jango_sell_account()   # 잔고에 남아있던 건 처분
-
             #장 시작, 끝 확인
             self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["장시작시간"]["장운영구분"], "0")
+
+            self.jango_sell_account()   # 잔고에 남아있던 건 처분
 
             while(True):
                 #self.new_high_stock() #신고가 
@@ -155,6 +156,15 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "비밀번호입력매체구분", "00")
         self.dynamicCall("SetInputValue(String, String)", "조회구분", "2")
         self.dynamicCall("CommRqData(String, String, int, String)","예수금상세현황요청","opw00001", "0", screen_num)
+
+        self.detail_account_info_event_loop.exec_()
+    
+    def detail_account_info2(self, screen_num):
+        self.dynamicCall("SetInputValue(String, String)", "계좌번호", self.account_num)
+        self.dynamicCall("SetInputValue(String, String)", "비밀번호", "0000")
+        self.dynamicCall("SetInputValue(String, String)", "상장폐지조회구분", "0")
+        self.dynamicCall("SetInputValue(String, String)", "비밀번호입력매체구분", "00")
+        self.dynamicCall("CommRqData(String, String, int, String)","계좌평가현황요청","OPW00004", "0", screen_num)
 
         self.detail_account_info_event_loop.exec_()
 
@@ -309,15 +319,32 @@ class Kiwoom(QAxWidget):
 
             self.detail_account_info_event_loop.exit()
         
-        elif sRQName == "계좌평가잔고내역":
-            self.log.logPrint("계좌평가잔고내역")
+        elif sRQName == "계좌평가현황요청":
+            self.log.logPrint("계좌평가현황요청")
             
+            deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "예수금")
+            if deposit == '':
+                deposit = 0
+            deposit = int(deposit)
+            self.log.logPrint("예수금: {}".format(deposit))
+
             total_buy_money = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총매입금액")
             if total_buy_money == '':
                 total_buy_money = 0
             total_buy_money = int(total_buy_money)
-
             self.log.logPrint("총매입금액: {}".format(total_buy_money))
+
+            self.use_money_origin = deposit - total_buy_money
+            self.my_account_money = self.use_money_origin
+            self.use_money = self.use_money_origin * self.use_money_percent
+            self.use_money = int(self.use_money)
+
+            self.log.logPrint("매수가능금액: {}".format(self.use_money_origin))
+
+            self.detail_account_info_event_loop.exit()
+        
+        elif sRQName == "계좌평가잔고내역":
+            self.log.logPrint("계좌평가잔고내역")
             
             total_profit_loss_rate = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "총수익률(%)")
             if total_profit_loss_rate == '':

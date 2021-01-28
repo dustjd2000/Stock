@@ -66,6 +66,8 @@ class Kiwoom(QAxWidget):
             self.detail_account_mystock()   #계좌평가 잔고 내역
             #self.not_concluded_account() #미체결정보 확인
 
+            self.jango_sell_account()   # 잔고에 남아있던 건 처분
+
             #장 시작, 끝 확인
             self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["장시작시간"]["장운영구분"], "0")
 
@@ -74,7 +76,6 @@ class Kiwoom(QAxWidget):
                 self.high_stock() #가격급등락
                 
                 if self.will_account_stock_code.keys() :
-                    self.merge_sell_account()
                     break
                 else:
                     time.sleep(30)
@@ -149,7 +150,6 @@ class Kiwoom(QAxWidget):
         self.log.logPrint(msg)
 
     def detail_account_info(self, screen_num):
-        print("예수금 가져오기")
         self.dynamicCall("SetInputValue(String, String)", "계좌번호", self.account_num)
         self.dynamicCall("SetInputValue(String, String)", "비밀번호", "0000")
         self.dynamicCall("SetInputValue(String, String)", "비밀번호입력매체구분", "00")
@@ -293,14 +293,17 @@ class Kiwoom(QAxWidget):
             deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "예수금")
             self.log.logPrint("예수금: {}".format(int(deposit)))
 
-            self.use_money_origin = int(deposit)
+            #ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
+            #self.log.logPrint("출금가능금액: {}".format(int(ok_deposit)))
+
+            ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "주문가능금액")
+            self.log.logPrint("주문가능금액: {}".format(int(ok_deposit)))
+
+            self.use_money_origin = int(ok_deposit)
             self.my_account_money = self.use_money_origin
 
-            self.use_money = int(deposit) * self.use_money_percent
+            self.use_money = self.use_money_origin * self.use_money_percent
             #self.use_money = int(self.use_money / 4)
-
-            ok_deposit = self.dynamicCall("GetCommData(String, String, int, String)",sTrCode, sRQName, 0, "출금가능금액")
-            self.log.logPrint("출금가능금액: {}".format(int(ok_deposit)))
 
             #self.stop_screen_cancel(self.screen_my_info)
 
@@ -818,7 +821,7 @@ class Kiwoom(QAxWidget):
     def Send_Sell_Sucess_Mail(self):
         #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        total_money = "현재 예수금: {}".format(self.my_account_money) + "\n\n"
+        total_money = "현재 보유잔고: {}".format(self.my_account_money) + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"
@@ -867,7 +870,7 @@ class Kiwoom(QAxWidget):
         msg = "receiveMsg() - " + requestName + ": " + msg + "\n"
         self.log.logPrint(msg)
     
-    def merge_sell_account(self):
+    def jango_sell_account(self):
         
         if not self.accout_stock_dict.keys():
             return
@@ -891,3 +894,5 @@ class Kiwoom(QAxWidget):
                 self.sell_account_stock_dict[code].update({"보유수량": stoc_quan})  
                 self.sell_account_stock_dict[code].update({"주문가능수량": stoc_quan})
                 self.sell_account_stock_dict[code].update({"매입단가": buy_price})
+        
+        self.Send_Sell_Order()

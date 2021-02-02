@@ -37,7 +37,7 @@ class Kiwoom(QAxWidget):
         self.use_money_origin = 0 # 보유 예수금
         self.use_money = 0  # 보유 예수금 주식주문 비용
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
-        self.use_up_down_rate_percent = 6 # 신고가 조회 등락율 %
+        self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
         self.use_sell_order_rate = 0.03 # 매도 주문 조건 등락율 *100 %
         self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
 
@@ -334,12 +334,12 @@ class Kiwoom(QAxWidget):
             total_buy_money = int(total_buy_money)
             self.log.logPrint("총매입금액: {}".format(total_buy_money))
 
-            self.use_money_origin = deposit - total_buy_money
+            self.use_money_origin = deposit
             self.my_account_money = self.use_money_origin
             self.use_money = self.use_money_origin * self.use_money_percent
             self.use_money = int(self.use_money)
 
-            self.log.logPrint("매수가능금액: {}".format(self.use_money_origin))
+            self.log.logPrint("매수가능금액: {}".format(self.use_money))
 
             self.detail_account_info_event_loop.exit()
         
@@ -535,11 +535,11 @@ class Kiwoom(QAxWidget):
                 trade_count = trade_count.strip()
                 high_rate = high_rate.strip()
 
-                if '+' in high_rate and '-' not in up_down_rate:     #등락률 +
-                    high_rate_temp = int(float(high_rate[1:]))
+                if '-' not in high_rate and '-' not in up_down_rate:     #등락률 +
+                    up_down_rate = int(float(up_down_rate[1:]))
                     
-                    if high_rate_temp == self.use_up_down_rate_percent or high_rate_temp == self.use_up_down_rate_percent +1 or high_rate_temp == self.use_up_down_rate_percent +2:
-                        if self.use_money > current_price and current_price < 100000:
+                    if up_down_rate == self.use_up_down_rate_percent or up_down_rate == self.use_up_down_rate_percent +1 or up_down_rate == self.use_up_down_rate_percent +2:
+                        if self.use_money > current_price and current_price < 20000:
                             
                             if code in self.will_account_stock_code:
                                 continue
@@ -647,6 +647,12 @@ class Kiwoom(QAxWidget):
                "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["주문구분"])    # 출력 : 매도 , 매수
             chegual_price = self.dynamicCall(
                "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["체결가"])
+            total_chegual_price = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["체결누계금액"])
+            susu_tax = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["당일매매수수료"])
+            tax = self.dynamicCall(
+               "GetChejanData(int)", self.realtype.REALTYPE["주문체결"]["당일매매세금"])
             
             accountnum = accountnum.strip()
             code = code.strip()
@@ -681,6 +687,21 @@ class Kiwoom(QAxWidget):
                 chegual_price = 0
             else :
                 chegual_price = int(chegual_price)
+            
+            if total_chegual_price == '':
+                total_chegual_price = 0
+            else :
+                total_chegual_price = int(total_chegual_price)
+            
+            if susu_tax == '':
+                susu_tax = 0
+            else :
+                susu_tax = int(susu_tax)
+            
+            if tax == '':
+                tax = 0
+            else :
+                tax = int(tax)
 
             #매수 체결
             if order_status == "체결" and (order_gubun == "매수" or order_gubun == "매수정정") and code in self.will_account_stock_code_finish:
@@ -691,6 +712,13 @@ class Kiwoom(QAxWidget):
                 self.log.logPrint("주문번호: {}".format(order_number))
                 self.log.logPrint("주문상태: {}".format(order_status))
                 self.log.logPrint("주문구분: {}".format(order_gubun))
+                self.log.logPrint("주문수량: {}".format(order_quan))
+                self.log.logPrint("미체결수량: {}".format(not_order_quan))
+                self.log.logPrint("주문가격: {}".format(order_price))
+                self.log.logPrint("체결가격: {}".format(chegual_price))
+                self.log.logPrint("체결누계금액: {}".format(total_chegual_price))
+                self.log.logPrint("당일매매수수료: {}".format(susu_tax))
+                self.log.logPrint("당일매매세금: {}".format(tax))
                 self.log.logPrint("##############################")
 
                 self.will_account_stock_code_finish.remove(code)
@@ -707,7 +735,8 @@ class Kiwoom(QAxWidget):
                 
                 self.objMail.SendMailMsgSet(subject, msg)
 
-                self.my_account_money = self.my_account_money - (chegual_price * order_quan)
+                self.my_account_money = self.my_account_money - total_chegual_price - susu_tax - tax
+                self.log.logPrint("매수 체결 후 my_account_money: {}".format(self.my_account_money))
                     
                 
             #매도 체결
@@ -719,6 +748,13 @@ class Kiwoom(QAxWidget):
                 self.log.logPrint("주문번호: {}".format(order_number))
                 self.log.logPrint("주문상태: {}".format(order_status))
                 self.log.logPrint("주문구분: {}".format(order_gubun))
+                self.log.logPrint("주문수량: {}".format(order_quan))
+                self.log.logPrint("미체결수량: {}".format(not_order_quan))
+                self.log.logPrint("주문가격: {}".format(order_price))
+                self.log.logPrint("체결가격: {}".format(chegual_price))
+                self.log.logPrint("체결누계금액: {}".format(total_chegual_price))
+                self.log.logPrint("당일매매수수료: {}".format(susu_tax))
+                self.log.logPrint("당일매매세금: {}".format(tax))
                 self.log.logPrint("##############################")
 
                 self.sell_success_stock_dict_finish.remove(code)                
@@ -734,7 +770,8 @@ class Kiwoom(QAxWidget):
                 self.sell_success_stock_dict[code].update(
                     {"매도수구분": order_gubun})
                 
-                self.my_account_money = self.my_account_money + (chegual_price * order_quan)
+                self.my_account_money = self.my_account_money + total_chegual_price - susu_tax - tax
+                self.log.logPrint("매도 체결 후 my_account_money: {}".format(self.my_account_money))
 
                 
         elif int(sGubun) == 1:
@@ -848,7 +885,7 @@ class Kiwoom(QAxWidget):
     def Send_Sell_Sucess_Mail(self):
         #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        total_money = "현재 보유잔고: {}".format(self.my_account_money) + "\n\n"
+        total_money = "현재 예수금: {}".format(self.my_account_money) + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"

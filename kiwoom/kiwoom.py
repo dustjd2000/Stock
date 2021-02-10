@@ -37,7 +37,8 @@ class Kiwoom(QAxWidget):
         self.use_money_origin = 0 # 보유 예수금
         self.use_money = 0  # 보유 예수금 주식주문 비용
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
-        self.use_up_down_rate_percent = 7 # 신고가 조회 등락율 %
+        self.use_up_down_rate_percent = 5 # 신고가 조회 등락율 %
+        self.use_up_down_rate_percent2 = 1 # 신고가 조회 급등율 %
         self.use_sell_order_rate = 0.03 # 매도 주문 조건 등락율 *100 %
         self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
 
@@ -200,7 +201,7 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(String, String)", "시장구분", "000")
         self.dynamicCall("SetInputValue(String, String)", "등락구분", "1") # 1: 급등, 2: 급락
         self.dynamicCall("SetInputValue(String, String)", "시간구분", "1") # 1: 분전, 2: 일전
-        self.dynamicCall("SetInputValue(String, String)", "거래량구분", "00010") # 1만주이상 ,  00050 5만주
+        self.dynamicCall("SetInputValue(String, String)", "거래량구분", "00010") # 00010 1만주이상 ,  00050 5만주
         self.dynamicCall("CommRqData(String, String, int, String)","가격급등락요청","opt10019", sPrevNext, self.screen_my_info)
 
         self.detail_account_info_event_loop.exec_()
@@ -537,9 +538,9 @@ class Kiwoom(QAxWidget):
 
                 if '-' not in high_rate and '-' not in up_down_rate:     #등락률 +
                     up_down_rate = int(float(up_down_rate[1:]))
-                    
-                    if up_down_rate == self.use_up_down_rate_percent or up_down_rate == self.use_up_down_rate_percent +1 or up_down_rate == self.use_up_down_rate_percent +2:
-                        if self.use_money > current_price and current_price < 20000:
+                    high_rate = int(float(high_rate[1:]))
+                    if (up_down_rate == self.use_up_down_rate_percent or up_down_rate == self.use_up_down_rate_percent +1) and ( high_rate >= self.use_up_down_rate_percent2):
+                        if self.use_money > current_price and current_price < 20000 and current_price > 3000:
                             
                             if code in self.will_account_stock_code:
                                 continue
@@ -885,7 +886,8 @@ class Kiwoom(QAxWidget):
     def Send_Sell_Sucess_Mail(self):
         #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
         account_num = "사용계좌: {}".format(self.account_num) + "\n\n"
-        total_money = "현재 예수금: {}".format(self.my_account_money) + "\n\n"
+        #total_money = "현재 예수금: {}".format(self.my_account_money) + "\n\n"
+        total_money = "계좌 실현손익을 확인하세요." + "\n\n"
         
         msg = "내역 : \n"
         msg += "**********************************" + "\n"

@@ -23,5 +23,5 @@ class Main(object):
 
 if __name__ == '__main__':
     start = Main()
-    start.sendMail()
+    #start.sendMail()
     start.start_kiwoom()

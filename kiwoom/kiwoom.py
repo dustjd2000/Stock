@@ -65,24 +65,13 @@ class Kiwoom(QAxWidget):
             self.get_account_info()
             #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
             self.detail_account_info2(self.screen_my_info) #매수가능 금액 계산
-            self.detail_account_mystock()   #계좌평가 잔고 내역
+            
             #self.not_concluded_account() #미체결정보 확인
 
             #장 시작, 끝 확인
             self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["장시작시간"]["장운영구분"], "0")
 
-            self.jango_sell_account()   # 잔고에 남아있던 건 처분
-
-            while(True):
-                #self.new_high_stock() #신고가 
-                self.high_stock() #가격급등락
-                
-                if self.will_account_stock_code.keys() :
-                    break
-                else:
-                    time.sleep(30)
             
-            self.Send_Buy_Order() # 매수 주문
 
             # 특정 종목 실시간 
             #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
@@ -570,9 +559,33 @@ class Kiwoom(QAxWidget):
            value = self.dynamicCall("GetCommRealData(QString, int)", sCode, fid)
 
            if value == '0':
-                self.log.logPrint("장 시작 전")
+                #self.log.logPrint("장 시작 전")
+                pass
            elif value == '3':
                 self.log.logPrint("장 시작")
+
+                # 주식 시작 메일 발송 ########
+                subject = "Kiwoom 자동주식매매 Start"
+                sendmsg = "자동 주식 매매 시작!"
+
+                self.objMail.SendMailMsgSet(subject, sendmsg)
+                #############################
+                ## 잔고 매도 및 매수 실행###############
+                self.detail_account_mystock()   #계좌평가 잔고 내역
+                self.jango_sell_account()   # 잔고에 남아있던 건 처분
+
+                while(True):
+                    #self.new_high_stock() #신고가 
+                    self.high_stock() #가격급등락
+                    
+                    if self.will_account_stock_code.keys() :
+                        break
+                    else:
+                        time.sleep(30)
+                
+                self.Send_Buy_Order() # 매수 
+                ######################################
+
            elif value == '2':
                 #self.log.logPrint("장 종료, 동시호가로 넘어감")
                 pass
@@ -897,7 +910,8 @@ class Kiwoom(QAxWidget):
             msg += "주문상태: {}".format(self.sell_success_stock_dict[key]["주문상태"]) + "\n"
             msg += "체결누계금액: {}".format(self.sell_success_stock_dict[key]["체결누계금액"]) + "\n"
             msg += "매도수구분: {}".format(self.sell_success_stock_dict[key]["매도수구분"]) + "\n"
-            msg += "**********************************" + "\n" 
+            msg += "**********************************" + "\n"
+            self.sell_success_stock_dict.remove(key) 
 
         subject = "Kiwoom 자동주식매매 Sell_Success"
         sendmsg = account_num + total_money + msg

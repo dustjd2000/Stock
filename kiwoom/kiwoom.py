@@ -65,19 +65,31 @@ class Kiwoom(QAxWidget):
             self.get_account_info()
             #self.detail_account_info(self.screen_my_info) #예수금 정보 가져오기
             self.detail_account_info2(self.screen_my_info) #매수가능 금액 계산
+            self.detail_account_mystock()   #계좌평가 잔고 내역
             
             #self.not_concluded_account() #미체결정보 확인
 
             #장 시작, 끝 확인
             self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["장시작시간"]["장운영구분"], "0")
 
-            
-
             # 특정 종목 실시간 
             #self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, '', self.realtype.REALTYPE["주문체결"]["주문상태"], "0")
             #self.Send_Sell_Order() # 매도 주문
 
-            
+            ## 잔고 매도 및 매수 실행###############
+            self.jango_sell_account()   # 잔고에 남아있던 건 처분
+
+            while(True):
+                #self.new_high_stock() #신고가 
+                self.high_stock() #가격급등락
+                        
+                if self.will_account_stock_code.keys() :
+                    break
+                else:
+                    time.sleep(30)
+                    
+            self.Send_Buy_Order() # 매수 
+            ######################################
             """
             while True:
                 now = time.localtime()
@@ -159,6 +171,7 @@ class Kiwoom(QAxWidget):
         self.detail_account_info_event_loop.exec_()
 
     def detail_account_mystock(self, sPrevNext="0"):
+        print("계좌평가잔고내역 조회")
         self.dynamicCall("SetInputValue(String, String)", "계좌번호", self.account_num)
         self.dynamicCall("SetInputValue(String, String)", "비밀번호", "0000")
         self.dynamicCall("SetInputValue(String, String)", "비밀번호입력매체구분", "00")
@@ -570,22 +583,7 @@ class Kiwoom(QAxWidget):
 
                 self.objMail.SendMailMsgSet(subject, sendmsg)
                 #############################
-                ## 잔고 매도 및 매수 실행###############
-                self.detail_account_mystock()   #계좌평가 잔고 내역
-                self.jango_sell_account()   # 잔고에 남아있던 건 처분
-
-                while(True):
-                    #self.new_high_stock() #신고가 
-                    self.high_stock() #가격급등락
-                    
-                    if self.will_account_stock_code.keys() :
-                        break
-                    else:
-                        time.sleep(30)
                 
-                self.Send_Buy_Order() # 매수 
-                ######################################
-
            elif value == '2':
                 #self.log.logPrint("장 종료, 동시호가로 넘어감")
                 pass

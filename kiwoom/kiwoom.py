@@ -909,7 +909,7 @@ class Kiwoom(QAxWidget):
             msg += "체결누계금액: {}".format(self.sell_success_stock_dict[key]["체결누계금액"]) + "\n"
             msg += "매도수구분: {}".format(self.sell_success_stock_dict[key]["매도수구분"]) + "\n"
             msg += "**********************************" + "\n"
-            self.sell_success_stock_dict.remove(key) 
+            del self.sell_success_stock_dict[key] 
 
         subject = "Kiwoom 자동주식매매 Sell_Success"
         sendmsg = account_num + total_money + msg

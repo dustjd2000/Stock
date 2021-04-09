@@ -37,7 +37,7 @@ class Kiwoom(QAxWidget):
         self.use_money_origin = 0 # 보유 예수금
         self.use_money = 0  # 보유 예수금 주식주문 비용
         self.use_money_percent = 0.5    # 예수금 중 주식주문 사용 비율
-        self.use_up_down_rate_percent = 5 # 신고가 조회 등락율 %
+        self.use_up_down_rate_percent = 4 # 신고가 조회 등락율 %
         self.use_up_down_rate_percent2 = 1 # 신고가 조회 급등율 %
         self.use_sell_order_rate = 0.03 # 매도 주문 조건 등락율 *100 %
         self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
@@ -257,6 +257,9 @@ class Kiwoom(QAxWidget):
 
         for sCode in self.sell_account_stock_dict:
 
+            self.log.logPrint(
+                    "*********************************************")
+
             hoga = self.hogaUnitCalc(self.sell_account_stock_dict[sCode]["현재가"])
 
             hope_price = int(self.sell_account_stock_dict[sCode]["매입단가"]) + \
@@ -285,8 +288,7 @@ class Kiwoom(QAxWidget):
             else:
                 self.log.logPrint("매도주문전달 실패")
 
-            self.log.logPrint(
-                    "*********************************************")
+            self.log.logPrint("매도결과코드: {}".format(errors(order_success)))
             self.log.logPrint("종목명: {}".format(self.sell_account_stock_dict[sCode]["종목명"]))
             self.log.logPrint("종목코드: {}".format(self.sell_account_stock_dict[sCode]["종목코드"]))
             self.log.logPrint("현재가: {}".format(self.sell_account_stock_dict[sCode]["현재가"]))
@@ -735,6 +737,20 @@ class Kiwoom(QAxWidget):
 
                 self.will_account_stock_code_finish.remove(code)
 
+
+                hoga = self.hogaUnitCalc(chegual_price)
+
+                hope_price = int(chegual_price) + \
+                int(chegual_price * self.use_sell_order_rate)
+
+                buyhoga_count = int((hope_price - int(chegual_price)) / hoga)
+
+                sell_price = int(chegual_price) + (buyhoga_count * hoga)
+
+                won_1 = sell_price % 10
+
+                sell_price = sell_price - won_1
+
                 subject = "매수 체결"
                 msg = "########매수 체결 성공#########" + "\n"
                 msg += "계좌번호: {}".format(accountnum) + "\n"
@@ -743,6 +759,7 @@ class Kiwoom(QAxWidget):
                 msg += "주문번호: {}".format(order_number) + "\n"
                 msg += "주문상태: {}".format(order_status) + "\n"
                 msg += "주문구분: {}".format(order_gubun) + "\n"
+                msg += "예상매도가격: {}".format(sell_price) + "\n"
                 msg += "##############################" + "\n"
                 
                 self.objMail.SendMailMsgSet(subject, msg)
@@ -909,8 +926,8 @@ class Kiwoom(QAxWidget):
             msg += "체결누계금액: {}".format(self.sell_success_stock_dict[key]["체결누계금액"]) + "\n"
             msg += "매도수구분: {}".format(self.sell_success_stock_dict[key]["매도수구분"]) + "\n"
             msg += "**********************************" + "\n"
-            del self.sell_success_stock_dict[key] 
-
+            
+        self.sell_success_stock_dict = {}
         subject = "Kiwoom 자동주식매매 Sell_Success"
         sendmsg = account_num + total_money + msg
 

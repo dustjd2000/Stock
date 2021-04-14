@@ -43,6 +43,8 @@ class Kiwoom(QAxWidget):
         self.use_buy_price_rate = 2 # 매수 주문  - 현재가 * 비율
 
         self.my_account_money = 0 # 계좌 잔고 계산용
+
+        self.sell_count = 3 # 매도 재시도 최대 회수
         
         ####################
 
@@ -236,7 +238,8 @@ class Kiwoom(QAxWidget):
             self.log.logPrint("신규매수 주문전달 성공")
         else :
             self.log.logPrint("신규매수 주문전달 실패")
-        
+
+        self.log.logPrint("매수결과코드: {}".format(errors(order_success)))
         self.log.logPrint("종목명: {}".format(self.will_account_stock_code["종목명"]))
         self.log.logPrint("종목코드: {}".format(self.will_account_stock_code["종목코드"]))
         self.log.logPrint("현재가: {}".format(self.will_account_stock_code["현재가"]))
@@ -285,6 +288,7 @@ class Kiwoom(QAxWidget):
 
             if order_success == 0:
                 self.log.logPrint("매도주문전달 성공")
+                del self.sell_account_stock_dict[sCode]
             else:
                 self.log.logPrint("매도주문전달 실패")
 
@@ -297,6 +301,11 @@ class Kiwoom(QAxWidget):
 
             self.sell_success_stock_dict_finish.append(sCode)
         self.log.logPrint("#########매도 주문 끝#########")
+
+        if len(self.sell_account_stock_dict) > 0 and self.sell_count > 0:
+            self.sell_count = self.sell_count - 1
+            self.Send_Sell_Order()
+
     
     def stop_screen_cancel(self, sScrNo):
         self.dynamicCall("DisconnectRealData(QString)", sScrNo)
@@ -909,6 +918,7 @@ class Kiwoom(QAxWidget):
                 self.dynamicCall("SetRealRemove(QString, QString)", self.screen_my_info, sCode)     # 실시간 정보 끊기 해당 종목 스크린에서
                 self.Send_Sell_Sucess_Mail()
             elif like_quan > 0:
+                self.sell_count = 3
                 self.Send_Sell_Order()
 
     def Send_Sell_Sucess_Mail(self):
@@ -923,7 +933,6 @@ class Kiwoom(QAxWidget):
             msg += "종목코드: {}".format(self.sell_success_stock_dict[key]["종목코드"]) + "\n"
             msg += "종목명: {}".format(self.sell_success_stock_dict[key]["종목명"]) + "\n"
             msg += "주문상태: {}".format(self.sell_success_stock_dict[key]["주문상태"]) + "\n"
-            msg += "체결누계금액: {}".format(self.sell_success_stock_dict[key]["체결누계금액"]) + "\n"
             msg += "매도수구분: {}".format(self.sell_success_stock_dict[key]["매도수구분"]) + "\n"
             msg += "**********************************" + "\n"
             
